@@ -242,7 +242,6 @@ static int dsi_get_lane_mbps(void *priv_data, struct display_timing *timings,
 	u32 val;
 
 	/* Update lane capabilities according to hw version */
-	dsi->hw_version = dsi_read(dsi, DSI_VERSION) & VERSION;
 	dsi->lane_min_kbps = LANE_MIN_KBPS;
 	dsi->lane_max_kbps = LANE_MAX_KBPS;
 	if (dsi->hw_version == HWVER_131) {
@@ -420,6 +419,16 @@ static int stm32_dsi_probe(struct udevice *dev)
 
 	/* Reset */
 	reset_deassert(&rst);
+
+	/* check hardware version */
+	dsi->hw_version = dsi_read(dsi, DSI_VERSION) & VERSION;
+	if (dsi->hw_version != HWVER_130 &&
+	    dsi->hw_version != HWVER_131) {
+		dev_err(dev, "bad dsi hardware version\n");
+		clk_disable(&clk);
+		regulator_set_enable(dsi->vdd_reg, false);
+		return -ENODEV;
+	}
 
 	return 0;
 }
