@@ -173,6 +173,9 @@ static u32 get_bootmode(void)
 	u32 bootrom_itf = readl(BOOTROM_PARAM_ADDR);
 	u32 bootrom_device, bootrom_instance;
 
+	/* enable TAMP clock = RTCAPBEN */
+	writel(BIT(8), RCC_MP_APB5ENSETR);
+
 	/* read bootrom context */
 	bootrom_device =
 		(bootrom_itf & BOOTROM_MODE_MASK) >> BOOTROM_MODE_SHIFT;
