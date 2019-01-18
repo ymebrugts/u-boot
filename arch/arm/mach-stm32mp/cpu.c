@@ -165,11 +165,12 @@ static void dbgmcu_init(void)
 }
 #endif /* !defined(CONFIG_SPL) || defined(CONFIG_SPL_BUILD) */
 
-static u32 get_bootmode(void)
-{
-	u32 boot_mode;
 #if !defined(CONFIG_STM32MP1_TRUSTED) && \
 	(!defined(CONFIG_SPL) || defined(CONFIG_SPL_BUILD))
+/* get bootmode from ROM code boot context: saved in TAMP register */
+static void update_bootmode(void)
+{
+	u32 boot_mode;
 	u32 bootrom_itf = readl(BOOTROM_PARAM_ADDR);
 	u32 bootrom_device, bootrom_instance;
 
@@ -190,12 +191,14 @@ static u32 get_bootmode(void)
 	clrsetbits_le32(TAMP_BOOT_CONTEXT,
 			TAMP_BOOT_MODE_MASK,
 			boot_mode << TAMP_BOOT_MODE_SHIFT);
-#else
-	/* read TAMP backup register */
-	boot_mode = (readl(TAMP_BOOT_CONTEXT) & TAMP_BOOT_MODE_MASK) >>
-		    TAMP_BOOT_MODE_SHIFT;
+}
 #endif
-	return boot_mode;
+
+u32 get_bootmode(void)
+{
+	/* read bootmode from TAMP backup register */
+	return (readl(TAMP_BOOT_CONTEXT) & TAMP_BOOT_MODE_MASK) >>
+		    TAMP_BOOT_MODE_SHIFT;
 }
 
 /*
@@ -212,10 +215,10 @@ int arch_cpu_init(void)
 	dbgmcu_init();
 #ifndef CONFIG_STM32MP1_TRUSTED
 	security_init();
+	update_bootmode();
 #endif
 #endif
 
-	/* get bootmode from BootRom context: saved in TAMP register */
 	boot_mode = get_bootmode();
 
 	if ((boot_mode & TAMP_BOOT_DEVICE_MASK) == BOOT_SERIAL_UART)

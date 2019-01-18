@@ -24,8 +24,7 @@ u32 spl_boot_device(void)
 {
 	u32 boot_mode;
 
-	boot_mode = (readl(TAMP_BOOT_CONTEXT) & TAMP_BOOT_MODE_MASK) >>
-		    TAMP_BOOT_MODE_SHIFT;
+	boot_mode = get_bootmode();
 
 	switch (boot_mode) {
 	case BOOT_FLASH_SD_1:
