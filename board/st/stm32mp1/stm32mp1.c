@@ -9,6 +9,7 @@
 #include <dm.h>
 #include <clk.h>
 #include <console.h>
+#include <environment.h>
 #include <fdt_support.h>
 #include <generic-phy.h>
 #include <i2c.h>
@@ -793,6 +794,28 @@ error:
 	return ret;
 }
 #endif
+
+enum env_location env_get_location(enum env_operation op, int prio)
+{
+	u32 bootmode = get_bootmode();
+
+	if (prio)
+		return ENVL_UNKNOWN;
+
+	switch (bootmode & TAMP_BOOT_DEVICE_MASK) {
+#ifdef CONFIG_ENV_IS_IN_EXT4
+	case BOOT_FLASH_SD:
+	case BOOT_FLASH_EMMC:
+		return ENVL_EXT4;
+#endif
+#ifdef CONFIG_ENV_IS_IN_UBI
+	case BOOT_FLASH_NAND:
+		return ENVL_UBI;
+#endif
+	default:
+		return ENVL_NOWHERE;
+	}
+}
 
 #if defined(CONFIG_ENV_IS_IN_EXT4)
 const char *env_ext4_get_intf(void)
