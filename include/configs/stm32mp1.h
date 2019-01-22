@@ -50,6 +50,12 @@
  */
 #define CONFIG_ENV_SIZE				SZ_4K
 
+#if defined(CONFIG_ENV_IS_IN_UBI)
+#define	CONFIG_ENV_UBI_PART			"UBI"
+#define	CONFIG_ENV_UBI_VOLUME			"uboot_config"
+#define CONFIG_ENV_UBI_VOLUME_REDUND		"uboot_config_r"
+#endif
+
 /* ATAGs */
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_SETUP_MEMORY_TAGS
