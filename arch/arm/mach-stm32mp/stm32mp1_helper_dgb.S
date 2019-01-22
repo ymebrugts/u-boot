@@ -20,14 +20,18 @@
 #define DBG_DSCR_ADDR			0x500D0088
 #define DBG_DSCR_HDBGEN			BIT(14)
 
+#define RCC_DBGCFGR_ADDR		0x5000080C
+#define RCC_DBGCFGR_DBGCKEN		BIT(8)
+
 #define PWR_CR1_ADDR			0x50001000
 #define PWR_CR1_DBP			BIT(8)
 
+#define DBGMCU_IDC_ADDR			0x50081000
+#define DBGMCU_IDC_MASK			0xFFFF0FFF
+#define DBGMCU_IDC_VALUE		0x20000500
+
 #define TAMP_BKP_REGISTER_20		(0x5C00A100 + (20 << 2))
 
-#define BOOT_CONTEXT_ROM_VER_OFFSET	156
-#define BOOT_CONTEXT_CUT_VER_OFFSET	4
-#define BOOT_CONTEXT_CUT_VER_VALUE	0x00000200
 
 	.globl	save_boot_params
 
@@ -43,10 +47,17 @@ ENTRY(save_boot_params)
 	 */
 
 	/* Check Soc revision */
-	mov	r12, r0
-	ldr	r12, [r12, #BOOT_CONTEXT_ROM_VER_OFFSET]
-	ldr	r12, [r12, #BOOT_CONTEXT_CUT_VER_OFFSET]
-	teq	r12, #BOOT_CONTEXT_CUT_VER_VALUE
+	ldr	r12, =RCC_DBGCFGR_ADDR
+	ldr	r11, [r12]		/* read RCC_DBGCFGR (r11) */
+	orr	r10, r11, #RCC_DBGCFGR_DBGCKEN
+	str	r10, [r12]		/* update RCC_DBGCFGR */
+	ldr	r10, =DBGMCU_IDC_ADDR
+	ldr	r10, [r10]		/* read DBGMCU_IDC (r10) */
+	str	r11, [r12]		/* restore RCC_DBGCFGR (r11) */
+	ldr	r12, =DBGMCU_IDC_MASK
+	and	r10, r12		/* mask reserved bits */
+	ldr	r11, =DBGMCU_IDC_VALUE
+	teq	r10, r11		/* test DBGMCU_IDC */
 	bne	func_exit
 
 	/* Disable the backup domain write protection */
