@@ -896,29 +896,57 @@ void board_quiesce_devices(void)
 }
 
 #ifdef CONFIG_SYS_MTDPARTS_RUNTIME
+
+#define MTDPARTS_LEN		256
+
+/**
+ * The mtdparts_nand0 and mtdparts_nor0 variable tends to be long.
+ * If we need to access it before the env is relocated, then we need
+ * to use our own stack buffer. gd->env_buf will be too small.
+ *
+ * @param buf temporary buffer pointer MTDPARTS_LEN long
+ * @return mtdparts variable string, NULL if not found
+ */
+static const char *env_get_mtdparts(char *str, char *buf)
+{
+	if (gd->flags & GD_FLG_ENV_READY)
+		return env_get(str);
+	if (env_get_f(str, buf, MTDPARTS_LEN) != -1)
+		return buf;
+	return NULL;
+}
+
 void board_mtdparts_default(const char **mtdids, const char **mtdparts)
 {
 	struct udevice *dev;
-	char *s_nand0 = NULL, *s_nor0 = NULL;
+	char s_nand0[128] = {0}, s_nor0[128] = {0};
+	char mtdparts_buf[MTDPARTS_LEN];
+	const char *temp;
 	static char parts[256];
 	static char ids[22];
 
-	if (!uclass_get_device(UCLASS_MTD, 0, &dev))
-		s_nand0 = env_get("mtdparts_nand0");
+	if (!uclass_get_device(UCLASS_MTD, 0, &dev)) {
+		temp = env_get_mtdparts("mtdparts_nand0", mtdparts_buf);
+		if (temp)
+			snprintf(s_nand0, sizeof(s_nand0), temp);
+	}
 
-	if (!uclass_get_device(UCLASS_SPI_FLASH, 0, &dev))
-		s_nor0 = env_get("mtdparts_nor0");
+	if (!uclass_get_device(UCLASS_SPI_FLASH, 0, &dev)) {
+		temp = env_get_mtdparts("mtdparts_nor0", mtdparts_buf);
+		if (temp)
+			snprintf(s_nor0, sizeof(s_nor0), temp);
+	}
 
 	strcpy(ids, "");
 	strcpy(parts, "");
-	if (s_nand0 && s_nor0) {
+	if (strlen(s_nand0) && strlen(s_nor0)) {
 		snprintf(ids, sizeof(ids), "nor0=nor0,nand0=nand0");
 		snprintf(parts, sizeof(parts),
 			 "mtdparts=nor0:%s;nand0:%s", s_nor0, s_nand0);
-	} else if (s_nand0) {
+	} else if (strlen(s_nand0)) {
 		snprintf(ids, sizeof(ids), "nand0=nand0");
 		snprintf(parts, sizeof(parts), "mtdparts=nand0:%s", s_nand0);
-	} else if (s_nor0) {
+	} else if (strlen(s_nor0)) {
 		snprintf(ids, sizeof(ids), "nor0=nor0");
 		snprintf(parts, sizeof(parts), "mtdparts=nor0:%s", s_nor0);
 	}
