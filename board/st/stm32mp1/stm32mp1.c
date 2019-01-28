@@ -37,6 +37,9 @@
 #define SYSCFG_CMPENSETR	0x24
 #define SYSCFG_PMCCLRR		0x44
 
+#define SYSCFG_BOOTR_BOOT_MASK		GENMASK(2, 0)
+#define SYSCFG_BOOTR_BOOTPD_SHIFT	4
+
 #define SYSCFG_IOCTRLSETR_HSLVEN_TRACE		BIT(0)
 #define SYSCFG_IOCTRLSETR_HSLVEN_QUADSPI	BIT(1)
 #define SYSCFG_IOCTRLSETR_HSLVEN_ETH		BIT(2)
@@ -451,7 +454,8 @@ static void sysconf_init(void)
 
 	/* disable Pull-Down for boot pin connected to VDD */
 	bootr = readl(syscfg + SYSCFG_BOOTR);
-	bootr |= (bootr & 0x7 << 4);
+	bootr &= ~(SYSCFG_BOOTR_BOOT_MASK << SYSCFG_BOOTR_BOOTPD_SHIFT);
+	bootr |= (bootr & SYSCFG_BOOTR_BOOT_MASK) << SYSCFG_BOOTR_BOOTPD_SHIFT;
 	writel(bootr, syscfg + SYSCFG_BOOTR);
 	debug("[0x%x] SYSCFG.bootr = 0x%08x\n",
 	      (u32)syscfg + SYSCFG_BOOTR, readl(syscfg + SYSCFG_BOOTR));
