@@ -431,6 +431,7 @@ int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
 
 static void sysconf_init(void)
 {
+#ifndef CONFIG_STM32MP1_TRUSTED
 	u8 *syscfg;
 #ifdef CONFIG_DM_REGULATOR
 	struct udevice *pwr_dev;
@@ -529,6 +530,7 @@ static void sysconf_init(void)
 
 	debug("[0x%x] SYSCFG.cmpcr = 0x%08x\n",
 	      (u32)syscfg + SYSCFG_CMPCR, readl(syscfg + SYSCFG_CMPCR));
+#endif
 }
 
 /* board interface eth init */
