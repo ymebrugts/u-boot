@@ -189,6 +189,16 @@ static const struct reg_desc ddr_dyn[] = {
 static const struct reg_desc ddrphy_dyn[] = {
 	DDRPHY_REG_DYN(pir),
 	DDRPHY_REG_DYN(pgsr),
+	DDRPHY_REG_DYN(zq0sr0),
+	DDRPHY_REG_DYN(zq0sr1),
+	DDRPHY_REG_DYN(dx0gsr0),
+	DDRPHY_REG_DYN(dx0gsr1),
+	DDRPHY_REG_DYN(dx1gsr0),
+	DDRPHY_REG_DYN(dx1gsr1),
+	DDRPHY_REG_DYN(dx2gsr0),
+	DDRPHY_REG_DYN(dx2gsr1),
+	DDRPHY_REG_DYN(dx3gsr0),
+	DDRPHY_REG_DYN(dx3gsr1),
 };
 
 enum reg_type {
