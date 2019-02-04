@@ -215,8 +215,10 @@ static int stm32prog_serial_getc_err(void)
 
 	do {
 		err = ops->getc(down_serial_dev);
-		if (err == -EAGAIN)
+		if (err == -EAGAIN) {
 			ctrlc();
+			WATCHDOG_RESET();
+		}
 	} while ((err == -EAGAIN) && (!had_ctrlc()));
 
 	return err;
@@ -243,6 +245,7 @@ static bool stm32prog_serial_get_buffer(u8 *buffer, u32 *count)
 			*count -= 1;
 		} else if (err == -EAGAIN) {
 			ctrlc();
+			WATCHDOG_RESET();
 		} else {
 			break;
 		}
