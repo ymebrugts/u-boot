@@ -1004,10 +1004,16 @@ static int eqos_start(struct udevice *dev)
 	eqos->tx_desc_idx = 0;
 	eqos->rx_desc_idx = 0;
 
+	ret = eqos->config->ops->eqos_start_clks(dev);
+	if (ret < 0) {
+		pr_err("eqos_start_clks() failed: %d", ret);
+		goto err;
+	}
+
 	ret = eqos->config->ops->eqos_start_resets(dev);
 	if (ret < 0) {
 		pr_err("eqos_start_resets() failed: %d", ret);
-		goto err;
+		goto err_stop_clks;
 	}
 
 	udelay(10);
@@ -1031,6 +1037,17 @@ static int eqos_start(struct udevice *dev)
 	val = (rate / 1000000) - 1;
 	writel(val, &eqos->mac_regs->us_tic_counter);
 
+	eqos->phy = phy_connect(eqos->mii, 0, dev,
+				eqos->config->interface(dev));
+	if (!eqos->phy) {
+		pr_err("phy_connect() failed");
+		goto err_stop_resets;
+	}
+	ret = phy_config(eqos->phy);
+	if (ret < 0) {
+		pr_err("phy_config() failed: %d", ret);
+		goto err_shutdown_phy;
+	}
 	ret = phy_startup(eqos->phy);
 	if (ret < 0) {
 		pr_err("phy_startup() failed: %d", ret);
@@ -1258,6 +1275,8 @@ err_shutdown_phy:
 	eqos->phy = NULL;
 err_stop_resets:
 	eqos->config->ops->eqos_stop_resets(dev);
+err_stop_clks:
+	eqos->config->ops->eqos_stop_clks(dev);
 err:
 	pr_err("FAILED: %d", ret);
 	return ret;
@@ -1308,7 +1327,12 @@ void eqos_stop(struct udevice *dev)
 	clrbits_le32(&eqos->dma_regs->ch0_rx_control,
 		     EQOS_DMA_CH0_RX_CONTROL_SR);
 
+	if (eqos->phy) {
+		phy_shutdown(eqos->phy);
+		eqos->phy = NULL;
+	}
 	eqos->config->ops->eqos_stop_resets(dev);
+	eqos->config->ops->eqos_stop_clks(dev);
 
 	debug("%s: OK\n", __func__);
 }
@@ -1735,35 +1759,9 @@ static int eqos_probe(struct udevice *dev)
 		goto err_free_mdio;
 	}
 
-	// Bring up PHY
-	ret = eqos->config->ops->eqos_start_clks(dev);
-	if (ret < 0) {
-		pr_err("eqos_start_clks() failed: %d", ret);
-		goto err_free_mdio;
-	}
-
-	eqos->phy = phy_connect(eqos->mii, 0, dev,
-				eqos->config->interface(dev));
-	if (!eqos->phy) {
-		pr_err("phy_connect() failed");
-		ret = -ENODEV;
-		goto err_stop_resets;
-	}
-	ret = phy_config(eqos->phy);
-	if (ret < 0) {
-		pr_err("phy_config() failed: %d", ret);
-		goto err_shutdown_phy;
-	}
-
 	debug("%s: OK\n", __func__);
 	return 0;
 
-err_shutdown_phy:
-	phy_shutdown(eqos->phy);
-	eqos->phy = NULL;
-err_stop_resets:
-	eqos->config->ops->eqos_stop_resets(dev);
-	eqos->config->ops->eqos_stop_clks(dev);
 err_free_mdio:
 	mdio_free(eqos->mii);
 err_remove_resources_tegra:
@@ -1783,14 +1781,6 @@ static int eqos_remove(struct udevice *dev)
 
 	mdio_unregister(eqos->mii);
 	mdio_free(eqos->mii);
-
-	if (eqos->phy) {
-		phy_shutdown(eqos->phy);
-		eqos->phy = NULL;
-	}
-
-	eqos->config->ops->eqos_stop_resets(dev);
-	eqos->config->ops->eqos_stop_clks(dev);
 	eqos->config->ops->eqos_remove_resources(dev);
 
 	eqos_probe_resources_core(dev);
