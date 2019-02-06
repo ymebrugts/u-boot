@@ -1721,6 +1721,7 @@ static int eqos_probe(struct udevice *dev)
 	eqos->mii = mdio_alloc();
 	if (!eqos->mii) {
 		pr_err("mdio_alloc() failed");
+		ret = -ENOMEM;
 		goto err_remove_resources_tegra;
 	}
 	eqos->mii->read = eqos_mdio_read;
@@ -1745,6 +1746,7 @@ static int eqos_probe(struct udevice *dev)
 				eqos->config->interface(dev));
 	if (!eqos->phy) {
 		pr_err("phy_connect() failed");
+		ret = -ENODEV;
 		goto err_stop_resets;
 	}
 	ret = phy_config(eqos->phy);
