@@ -1037,17 +1037,24 @@ static int eqos_start(struct udevice *dev)
 	val = (rate / 1000000) - 1;
 	writel(val, &eqos->mac_regs->us_tic_counter);
 
-	eqos->phy = phy_connect(eqos->mii, 0, dev,
-				eqos->config->interface(dev));
+	/*
+	 * if PHY was already connected and configured,
+	 * don't need to reconnect/reconfigure again
+	 */
 	if (!eqos->phy) {
-		pr_err("phy_connect() failed");
-		goto err_stop_resets;
+		eqos->phy = phy_connect(eqos->mii, 0, dev,
+					eqos->config->interface(dev));
+		if (!eqos->phy) {
+			pr_err("phy_connect() failed");
+			goto err_stop_resets;
+		}
+		ret = phy_config(eqos->phy);
+		if (ret < 0) {
+			pr_err("phy_config() failed: %d", ret);
+			goto err_shutdown_phy;
+		}
 	}
-	ret = phy_config(eqos->phy);
-	if (ret < 0) {
-		pr_err("phy_config() failed: %d", ret);
-		goto err_shutdown_phy;
-	}
+
 	ret = phy_startup(eqos->phy);
 	if (ret < 0) {
 		pr_err("phy_startup() failed: %d", ret);
@@ -1272,7 +1279,6 @@ static int eqos_start(struct udevice *dev)
 
 err_shutdown_phy:
 	phy_shutdown(eqos->phy);
-	eqos->phy = NULL;
 err_stop_resets:
 	eqos->config->ops->eqos_stop_resets(dev);
 err_stop_clks:
@@ -1329,7 +1335,6 @@ void eqos_stop(struct udevice *dev)
 
 	if (eqos->phy) {
 		phy_shutdown(eqos->phy);
-		eqos->phy = NULL;
 	}
 	eqos->config->ops->eqos_stop_resets(dev);
 	eqos->config->ops->eqos_stop_clks(dev);
