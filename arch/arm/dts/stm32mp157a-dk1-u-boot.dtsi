@@ -39,13 +39,6 @@
 
 &i2c4 {
 	u-boot,dm-pre-reloc;
-
-	stusb1600: typec@28 {
-		#extcon-cells = <0>;
-		compatible = "st,stusb1600";
-		reg = <0x28>;
-		status = "okay";
-	};
 };
 
 &i2c4_pins_a {

@@ -58,6 +58,7 @@
 			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 		interrupt-parent = <&intc>;
+		always-on;
 	};
 
 	clocks {
@@ -430,8 +431,8 @@
 			interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc SPI2_K>;
 			resets = <&rcc SPI2_R>;
-			dmas = <&dmamux1 39 0x400 0x05>,
-			       <&dmamux1 40 0x400 0x05>;
+			dmas = <&dmamux1 39 0x400 0x01>,
+			       <&dmamux1 40 0x400 0x01>;
 			dma-names = "rx", "tx";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -456,8 +457,8 @@
 			interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc SPI3_K>;
 			resets = <&rcc SPI3_R>;
-			dmas = <&dmamux1 61 0x400 0x05>,
-			       <&dmamux1 62 0x400 0x05>;
+			dmas = <&dmamux1 61 0x400 0x01>,
+			       <&dmamux1 62 0x400 0x01>;
 			dma-names = "rx", "tx";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -756,8 +757,8 @@
 			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc SPI1_K>;
 			resets = <&rcc SPI1_R>;
-			dmas = <&dmamux1 37 0x400 0x05>,
-			       <&dmamux1 38 0x400 0x05>;
+			dmas = <&dmamux1 37 0x400 0x01>,
+			       <&dmamux1 38 0x400 0x01>;
 			dma-names = "rx", "tx";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -782,8 +783,8 @@
 			interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc SPI4_K>;
 			resets = <&rcc SPI4_R>;
-			dmas = <&dmamux1 83 0x400 0x05>,
-			       <&dmamux1 84 0x400 0x05>;
+			dmas = <&dmamux1 83 0x400 0x01>,
+			       <&dmamux1 84 0x400 0x01>;
 			dma-names = "rx", "tx";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -870,8 +871,8 @@
 			interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc SPI5_K>;
 			resets = <&rcc SPI5_R>;
-			dmas = <&dmamux1 85 0x400 0x05>,
-			       <&dmamux1 86 0x400 0x05>;
+			dmas = <&dmamux1 85 0x400 0x01>,
+			       <&dmamux1 86 0x400 0x01>;
 			dma-names = "rx", "tx";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -892,6 +893,8 @@
 
 				compatible = "st,stm32-sai-sub-a";
 				reg = <0x4 0x1c>;
+				clocks = <&rcc SAI1_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 87 0x400 0x01>;
 				status = "disabled";
 			};
@@ -900,6 +903,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-b";
 				reg = <0x24 0x1c>;
+				clocks = <&rcc SAI1_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 88 0x400 0x01>;
 				status = "disabled";
 			};
@@ -919,6 +924,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-a";
 				reg = <0x4 0x1c>;
+				clocks = <&rcc SAI2_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 89 0x400 0x01>;
 				status = "disabled";
 			};
@@ -927,6 +934,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-b";
 				reg = <0x24 0x1c>;
+				clocks = <&rcc SAI2_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 90 0x400 0x01>;
 				status = "disabled";
 			};
@@ -946,6 +955,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-a";
 				reg = <0x04 0x1c>;
+				clocks = <&rcc SAI3_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 113 0x400 0x01>;
 				status = "disabled";
 			};
@@ -954,6 +965,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-b";
 				reg = <0x24 0x1c>;
+				clocks = <&rcc SAI3_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 114 0x400 0x01>;
 				status = "disabled";
 			};
@@ -1221,7 +1234,6 @@
 			g-tx-fifo-size = <128 128 64 64 64 64 32 32>;
 			dr_mode = "otg";
 			usb33d-supply = <&usb33>;
-			power-domains = <&pd_core>;
 			status = "disabled";
 		};
 
@@ -1442,6 +1454,8 @@
 				#sound-dai-cells = <0>;
 				compatible = "st,stm32-sai-sub-b";
 				reg = <0x24 0x1c>;
+				clocks = <&rcc SAI4_K>;
+				clock-names = "sai_ck";
 				dmas = <&dmamux1 100 0x400 0x01>;
 				status = "disabled";
 			};
@@ -1756,7 +1770,6 @@
 			clocks = <&rcc USBH>;
 			resets = <&rcc USBH_R>;
 			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
-			power-domains = <&pd_core>;
 			status = "disabled";
 		};
 
@@ -1767,7 +1780,6 @@
 			resets = <&rcc USBH_R>;
 			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
 			companion = <&usbh_ohci>;
-			power-domains = <&pd_core>;
 			status = "disabled";
 		};
 
