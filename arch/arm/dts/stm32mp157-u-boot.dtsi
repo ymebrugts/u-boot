@@ -57,7 +57,7 @@
 };
 
 &bsec {
-	u-boot,dm-pre-reloc;
+	u-boot,dm-pre-proper;
 };
 
 &clk_csi {
@@ -146,7 +146,7 @@
 
 /* pre-reloc probe = reserve video frame buffer in video_reserve() */
 &ltdc {
-	u-boot,dm-pre-reloc;
+	u-boot,dm-pre-proper;
 };
 
 &pinctrl {
