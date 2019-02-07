@@ -30,10 +30,6 @@
 		u-boot,dm-pre-reloc;
 	};
 
-	config {
-		u-boot,dm-pre-reloc;
-	};
-
 	reboot {
 		u-boot,dm-pre-reloc;
 	};
