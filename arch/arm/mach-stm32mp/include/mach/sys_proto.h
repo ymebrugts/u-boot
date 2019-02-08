@@ -21,3 +21,5 @@ u32 get_cpu_type(void);
 u32 get_cpu_rev(void);
 /* return boot mode */
 u32 get_bootmode(void);
+/* start IWDG watchdog */
+int watchdog_start(void);

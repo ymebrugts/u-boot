@@ -8,6 +8,7 @@
 #include <environment.h>
 #include <fdt_support.h>
 #include <misc.h>
+#include <wdt.h>
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
 #include <asm/arch/sys_proto.h>
@@ -528,8 +529,61 @@ static int setup_serial_number(void)
 	return 0;
 }
 
+
+#if defined(CONFIG_WDT) && \
+(defined(CONFIG_SPL_WATCHDOG_SUPPORT) || !defined(CONFIG_SPL_BUILD))
+/* Called by macro WATCHDOG_RESET */
+void watchdog_reset(void)
+{
+	static ulong next_reset;
+	struct udevice *watchdog_dev;
+	ulong now;
+
+	now = timer_get_us();
+
+	/* Do not reset the watchdog too often, only every 1 sec */
+	if (now > next_reset) {
+		/*
+		 * Watchdog has been enabled at SPL stage, to avoid
+		 * watchdog_dev bad reference after relocation, we don't save
+		 * it in a static variable, we retrieve it each time using
+		 * uclass_get_device() call.
+		 */
+		if (uclass_get_device(UCLASS_WDT, 0, &watchdog_dev))
+			return;
+
+		wdt_reset(watchdog_dev);
+		next_reset = now + 1000000;
+	}
+}
+
+int watchdog_start(void)
+{
+	struct udevice *watchdog_dev;
+
+	if (uclass_get_device_by_seq(UCLASS_WDT, 0, &watchdog_dev)) {
+		debug("Watchdog: Not found by seq!\n");
+		if (uclass_get_device(UCLASS_WDT, 0, &watchdog_dev)) {
+			puts("Watchdog: Not found!\n");
+			return 0;
+		}
+	}
+
+	wdt_start(watchdog_dev, 0, 0);
+	printf("Watchdog: Started\n");
+
+	return 0;
+}
+#else
+int watchdog_start(void)
+{
+	return 0;
+}
+#endif
+
 int arch_misc_init(void)
 {
+	watchdog_start();
 	setup_boot_mode();
 	setup_mac_address();
 	setup_serial_number();
