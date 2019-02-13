@@ -286,6 +286,23 @@ static const char *stmfx_pinctrl_get_pin_name(struct udevice *dev,
 	return pin_name;
 }
 
+static int stmfx_pinctrl_get_pin_muxing(struct udevice *dev,
+					unsigned int selector,
+					char *buf, int size)
+{
+	struct stmfx_pinctrl *plat = dev_get_platdata(dev);
+	int func;
+
+	func = stmfx_gpio_get_function(plat->gpio, selector);
+	if (func < 0)
+		return func;
+
+	snprintf(buf, size, "%s", func == GPIOF_INPUT ? "input" : "output");
+
+	return 0;
+}
+
+
 static int stmfx_pinctrl_bind(struct udevice *dev)
 {
 	struct stmfx_pinctrl *plat = dev_get_platdata(dev);
@@ -306,6 +323,7 @@ const struct pinctrl_ops stmfx_pinctrl_ops = {
 	.get_pins_count = stmfx_pinctrl_get_pins_count,
 	.get_pin_name = stmfx_pinctrl_get_pin_name,
 	.set_state = pinctrl_generic_set_state,
+	.get_pin_muxing	= stmfx_pinctrl_get_pin_muxing,
 #if CONFIG_IS_ENABLED(PINCONF)
 	.pinconf_set = stmfx_pinctrl_conf_set,
 	.pinconf_num_params = ARRAY_SIZE(stmfx_pinctrl_conf_params),
