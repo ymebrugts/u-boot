@@ -49,6 +49,7 @@ u32 spl_boot_device(void)
 	case BOOT_FLASH_NOR_QSPI:
 		return BOOT_DEVICE_SPI;
 	}
+
 	return BOOT_DEVICE_MMC1;
 }
 

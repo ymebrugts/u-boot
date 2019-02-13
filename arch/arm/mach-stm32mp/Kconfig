@@ -68,7 +68,7 @@ config STM32MP1_TRUSTED
 		Say Y here to enable boot with TF-A
 		Trusted boot chain is :
 		BootRom => TF-A.stm32 (clock & DDR) => U-Boot.stm32
-		TF-A monitor provide ST smc to manage secure devices
+		TF-A monitor provides proprietary smc to manage secure devices
 
 config STM32MP1_OPTEE
 	bool "Support trusted boot with TF-A and OPTEE"
@@ -95,8 +95,6 @@ config STM32_ETZPC
 	help
 	  Say y to enable STM32 Extended TrustZone Protection
 	  Controller (ETZPC)
-
-source "board/st/stm32mp1/Kconfig"
 
 config CMD_STM32PROG
 	bool "command stm32prog for STM32CudeProgrammer"
@@ -149,6 +147,10 @@ config SYS_BOOTCOUNT_ADDR
 endif
 
 if DEBUG_UART
+
+config DEBUG_UART_BOARD_INIT
+	default y
+
 # debug on UART4 by default
 config DEBUG_UART_BASE
 	default 0x40010000
@@ -156,10 +158,8 @@ config DEBUG_UART_BASE
 # clock source is HSI on reset
 config DEBUG_UART_CLOCK
 	default 64000000
-
-# currently activated for debug / should be deactivated for real product
-config DEBUG_UART_BOARD_INIT
-	default y
 endif
+
+source "board/st/stm32mp1/Kconfig"
 
 endif
