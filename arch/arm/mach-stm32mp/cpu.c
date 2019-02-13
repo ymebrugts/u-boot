@@ -407,13 +407,15 @@ static void setup_boot_mode(void)
 		env_set("boot_instance", cmd);
 		break;
 	case BOOT_FLASH_NAND:
-		sprintf(cmd, "%d", instance);
 		env_set("boot_device", "nand");
-		env_set("boot_instance", cmd);
+		env_set("boot_instance", "0");
 		break;
 	case BOOT_FLASH_NOR:
 		env_set("boot_device", "nor");
 		env_set("boot_instance", "0");
+		break;
+	default:
+		pr_debug("unexpected boot mode = %x\n", boot_mode);
 		break;
 	}
 
@@ -423,8 +425,8 @@ static void setup_boot_mode(void)
 		env_set("preboot", "env set preboot; fastboot 0");
 		break;
 	case BOOT_STM32PROG:
-		printf("Enter STM32CubeProgrammer mode!\n");
-		env_set("preboot", "env set preboot; stm32prog usb 0");
+		env_set("boot_device", "usb");
+		env_set("boot_instance", "0");
 		break;
 	case BOOT_UMS_MMC0:
 	case BOOT_UMS_MMC1:
@@ -438,8 +440,9 @@ static void setup_boot_mode(void)
 		env_set("preboot", "env set preboot; run altbootcmd");
 		break;
 	case BOOT_NORMAL:
+		break;
 	default:
-		pr_debug("unexpected boot mode = %x\n", boot_mode);
+		pr_debug("unexpected forced boot mode = %x\n", forced_mode);
 		break;
 	}
 

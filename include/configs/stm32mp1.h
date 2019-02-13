@@ -130,20 +130,27 @@
 	func(MMC, mmc, 2) \
 	func(PXE, pxe, na)
 
-#include <config_distro_bootcmd.h>
+/*
+ * bootcmd for stm32mp1:
+ * for serial/usb: execute the stm32prog command
+ * for mmc boot (eMMC, SD card), boot only on the same device
+ * for nand boot, boot with on ubifs partition on nand
+ * for nor boot, use the default order
+ */
+#define CONFIG_PREBOOT
+#undef CONFIG_BOOTCOMMAND
+#define CONFIG_BOOTCOMMAND "echo \"Boot over ${boot_device}${boot_instance}!\";run bootcmd_stm32mp"
 
-#define CONFIG_PREBOOT \
-	"echo \"Boot over ${boot_device}${boot_instance}!\"; " \
-	"if test ${boot_device} = serial; then " \
-		"stm32prog serial ${boot_instance}; " \
-	"else if test ${boot_device} = usb; then " \
-		"stm32prog usb ${boot_instance}; " \
+#define STM32MP_BOOTCMD "bootcmd_stm32mp=" \
+	"if test ${boot_device} = serial || test ${boot_device} = usb; then " \
+		"stm32prog ${boot_device} ${boot_instance}; " \
 	"else " \
-		"if test ${boot_device} = mmc; then " \
-			"env set boot_targets \"mmc${boot_instance}\"; "\
-		"else if test ${boot_device} = nand; then " \
-			"env set boot_targets \"ubifs0\"; "\
-	"fi; fi; fi; fi;"
+		"if test ${boot_device} = mmc; then env set boot_targets \"mmc${boot_instance}\"; fi;" \
+		"if test ${boot_device} = nand; then env set boot_targets ubifs0; fi;" \
+		"run distro_bootcmd;" \
+	"fi;\0"
+
+#include <config_distro_bootcmd.h>
 
 #ifdef CONFIG_STM32MP1_OPTEE
 #define CONFIG_SYS_MEM_TOP_HIDE			SZ_32M
@@ -181,6 +188,7 @@
 	"bootlimit=0\0" \
 	"altbootcmd=run bootcmd\0" \
 	"usb_pgood_delay=2000\0" \
+	STM32MP_BOOTCMD \
 	STM32MP_MTDPARTS \
 	BOOTENV \
 	"boot_net_usb_start=true\0"
