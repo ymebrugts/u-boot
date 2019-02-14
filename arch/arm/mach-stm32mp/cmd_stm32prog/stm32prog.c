@@ -46,6 +46,9 @@
 	EFI_GUID(0xFD58F1C7, 0xBE0D, 0x4338, \
 		 0x88, 0xE9, 0xAD, 0x8F, 0x05, 0x0A, 0xEB, 0x18)
 
+/* RAW parttion (binary / bootloader) used Linux - reserved UUID */
+#define LINUX_RESERVED_UUID "8DA63339-0007-60C0-C436-083AC8230908"
+
 /*
  * unique partition guid (uuid) for partition named "rootfs"
  * on each MMC instance = SD Card or eMMC
@@ -874,7 +877,8 @@ static int create_partitions(struct stm32prog_data *data)
 			if (part->part_type == PART_BINARY)
 				offset += snprintf(buf + offset,
 						   ENV_BUF_LEN - offset,
-						   ",type=data");
+						   ",type="
+						   LINUX_RESERVED_UUID);
 			else
 				offset += snprintf(buf + offset,
 						   ENV_BUF_LEN - offset,
