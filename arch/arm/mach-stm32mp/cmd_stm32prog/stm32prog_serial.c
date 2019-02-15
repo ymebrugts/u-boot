@@ -729,6 +729,10 @@ static void download_command(struct stm32prog_data *data)
 	if (rcv_xor != my_xor) {
 		printf("checksum error on packet %d\n",
 		       packet_number);
+		/* wait to be sure that all data are received
+		 * in the FIFO before flush
+		 */
+		mdelay(30);
 		data->packet_number--;
 		result = NACK_BYTE;
 		goto end;
@@ -951,7 +955,7 @@ bool stm32prog_serial_loop(struct stm32prog_data *data)
 			/* wait to be sure that all data are received
 			 * in the FIFO before flush (CMD and XOR)
 			 */
-			mdelay(2);
+			mdelay(3);
 			stm32prog_serial_result(NACK_BYTE);
 		} else {
 			/*pr_debug("+ cmd %x\n", counter);*/
