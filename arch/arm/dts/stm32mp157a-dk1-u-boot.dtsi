@@ -174,7 +174,3 @@
 		bias-pull-up;
 	};
 };
-
-&usbotg_hs {
-	hnp-srp-disable;
-};
