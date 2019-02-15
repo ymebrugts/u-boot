@@ -176,7 +176,6 @@
 };
 
 &usbotg_hs {
-	usb1600;
 	hnp-srp-disable;
 };
 
