@@ -235,18 +235,11 @@ static struct reset_ctl usbotg_reset;
 /* STUSB1600_CC_CONNECTION_STATUS bitfields */
 #define STUSB1600_CC_ATTACH			BIT(0)
 
-static int stusb1600_init(void)
+static int stusb1600_init(ofnode node)
 {
 	struct udevice *dev, *bus;
-	ofnode node;
 	int ret;
 	u32 chip_addr;
-
-	node = ofnode_by_compatible(ofnode_null(), "st,stusb1600");
-	if (!ofnode_valid(node)) {
-		printf("stusb1600 not found\n");
-		return -ENODEV;
-	}
 
 	ret = ofnode_read_u32(node, "reg", &chip_addr);
 	if (ret)
@@ -281,6 +274,7 @@ static int stusb1600_cable_connected(void)
 
 void board_usbotg_init(void)
 {
+	ofnode usb1600_node;
 	int node;
 	struct fdtdec_phandle_args args;
 	struct udevice *dev;
@@ -361,8 +355,10 @@ void board_usbotg_init(void)
 	stm32mp_otg_data.tx_fifo_sz = fdtdec_get_int(blob, node,
 						     "g-tx-fifo-size", 0);
 
-	if (fdtdec_get_bool(blob, node, "usb1600")) {
-		stusb1600_init();
+	/* if node stusb1600 is present, means DK1 or DK2 board */
+	usb1600_node = ofnode_by_compatible(ofnode_null(), "st,stusb1600");
+	if (ofnode_valid(usb1600_node)) {
+		stusb1600_init(usb1600_node);
 		return;
 	}
 
