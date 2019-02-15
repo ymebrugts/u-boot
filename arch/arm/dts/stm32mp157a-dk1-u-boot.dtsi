@@ -178,7 +178,3 @@
 &usbotg_hs {
 	hnp-srp-disable;
 };
-
-&v3v3 {
-	regulator-always-on;
-};
