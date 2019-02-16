@@ -276,6 +276,7 @@ void board_usbotg_init(void)
 {
 	ofnode usb1600_node;
 	int node;
+	int count;
 	struct fdtdec_phandle_args args;
 	struct udevice *dev;
 	const void *blob = gd->fdt_blob;
@@ -352,8 +353,13 @@ void board_usbotg_init(void)
 						     "g-rx-fifo-size", 0);
 	stm32mp_otg_data.np_tx_fifo_sz = fdtdec_get_int(blob, node,
 							"g-np-tx-fifo-size", 0);
-	stm32mp_otg_data.tx_fifo_sz = fdtdec_get_int(blob, node,
-						     "g-tx-fifo-size", 0);
+
+	count = fdtdec_get_int_array_count(blob, node, "g-tx-fifo-size",
+			&stm32mp_otg_data.tx_fifo_sz_array[DWC2_SIZE_OFFS],
+			ARRAY_SIZE(stm32mp_otg_data.tx_fifo_sz_array));
+
+	if (count != -FDT_ERR_NOTFOUND)
+		stm32mp_otg_data.tx_fifo_sz_array[DWC2_SIZE_NB_OFFS] = count;
 
 	/* if node stusb1600 is present, means DK1 or DK2 board */
 	usb1600_node = ofnode_by_compatible(ofnode_null(), "st,stusb1600");
