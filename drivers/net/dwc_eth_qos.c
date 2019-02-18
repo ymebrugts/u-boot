@@ -262,6 +262,7 @@ struct eqos_desc {
 struct eqos_config {
 	bool reg_access_always_ok;
 	int mdio_wait;
+	int swr_wait;
 	int config_mac;
 	int config_mac_mdio;
 	int (*interface)(struct udevice *);
@@ -1021,7 +1022,8 @@ static int eqos_start(struct udevice *dev)
 	eqos->reg_access_ok = true;
 
 	ret = wait_for_bit_le32(&eqos->dma_regs->mode,
-				EQOS_DMA_MODE_SWR, false, 10, false);
+				EQOS_DMA_MODE_SWR, false,
+				eqos->config->swr_wait, false);
 	if (ret) {
 		pr_err("EQOS_DMA_MODE_SWR stuck");
 		goto err_stop_resets;
@@ -1823,6 +1825,7 @@ static struct eqos_ops eqos_tegra186_ops = {
 static const struct eqos_config eqos_tegra186_config = {
 	.reg_access_always_ok = false,
 	.mdio_wait = 10,
+	.swr_wait = 10,
 	.config_mac = EQOS_MAC_RXQ_CTRL0_RXQ0EN_ENABLED_DCB,
 	.config_mac_mdio = EQOS_MAC_MDIO_ADDRESS_CR_20_35,
 	.interface = eqos_get_interface_tegra186,
@@ -1849,6 +1852,7 @@ static struct eqos_ops eqos_stm32_ops = {
 static const struct eqos_config eqos_stm32_config = {
 	.reg_access_always_ok = false,
 	.mdio_wait = 10000,
+	.swr_wait = 50,
 	.config_mac = EQOS_MAC_RXQ_CTRL0_RXQ0EN_ENABLED_AV,
 	.config_mac_mdio = EQOS_MAC_MDIO_ADDRESS_CR_250_300,
 	.interface = eqos_get_interface_stm32,
