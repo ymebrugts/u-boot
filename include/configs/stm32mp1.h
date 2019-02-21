@@ -147,14 +147,17 @@
  */
 #define CONFIG_PREBOOT
 #undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND "echo \"Boot over ${boot_device}${boot_instance}!\";run bootcmd_stm32mp"
+#define CONFIG_BOOTCOMMAND \
+	"echo \"Boot over ${boot_device}${boot_instance}!\";run bootcmd_stm32mp"
 
 #define STM32MP_BOOTCMD "bootcmd_stm32mp=" \
-	"if test ${boot_device} = serial || test ${boot_device} = usb; then " \
-		"stm32prog ${boot_device} ${boot_instance}; " \
+	"if test ${boot_device} = serial || test ${boot_device} = usb;" \
+	"then stm32prog ${boot_device} ${boot_instance}; " \
 	"else " \
-		"if test ${boot_device} = mmc; then env set boot_targets \"mmc${boot_instance}\"; fi;" \
-		"if test ${boot_device} = nand; then env set boot_targets ubifs0; fi;" \
+		"if test ${boot_device} = mmc;" \
+		"then env set boot_targets \"mmc${boot_instance}\"; fi;" \
+		"if test ${boot_device} = nand;" \
+		"then env set boot_targets ubifs0; fi;" \
 		"run distro_bootcmd;" \
 	"fi;\0"
 
