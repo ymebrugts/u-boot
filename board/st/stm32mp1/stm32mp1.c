@@ -2,7 +2,6 @@
 /*
  * Copyright (C) 2018, STMicroelectronics - All Rights Reserved
  */
-
 #include <config.h>
 #include <common.h>
 #include <adc.h>
@@ -494,9 +493,12 @@ static void sysconf_init(void)
 		if (!ret)
 			otp = otp & BIT(13);
 
-		/* get VDD = pwr-supply */
-		ret = device_get_supply_regulator(pwr_dev, "pwr-supply",
-						  &pwr_reg);
+		ret = uclass_get_device_by_driver(UCLASS_PMIC,
+						  DM_GET_DRIVER(stm32mp_pwr_pmic),
+						  &dev);
+
+		/* get VDD = vdd-supply */
+		ret = device_get_supply_regulator(dev, "vdd-supply", &pwr_reg);
 
 		/* check if VDD is Low Voltage */
 		if (!ret) {
