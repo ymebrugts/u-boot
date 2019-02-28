@@ -177,16 +177,6 @@ struct stm32_qspi_priv {
 #define CMD_HAS_DATA	BIT(26)
 };
 
-static void _stm32_qspi_disable(struct stm32_qspi_priv *priv)
-{
-	clrbits_le32(&priv->regs->cr, STM32_QSPI_CR_EN);
-}
-
-static void _stm32_qspi_enable(struct stm32_qspi_priv *priv)
-{
-	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_EN);
-}
-
 static void _stm32_qspi_wait_for_not_busy(struct stm32_qspi_priv *priv)
 {
 	while (readl(&priv->regs->sr) & STM32_QSPI_SR_BUSY)
@@ -203,12 +193,6 @@ static void _stm32_qspi_wait_for_ftf(struct stm32_qspi_priv *priv)
 {
 	while (!(readl(&priv->regs->sr) & STM32_QSPI_SR_FTF))
 		;
-}
-
-static void _stm32_qspi_set_cs(struct stm32_qspi_priv *priv, unsigned int cs)
-{
-	clrsetbits_le32(&priv->regs->cr, STM32_QSPI_CR_FSEL,
-			cs ? STM32_QSPI_CR_FSEL : 0);
 }
 
 static unsigned int _stm32_qspi_gen_ccr(struct stm32_qspi_priv *priv, u8 fmode)
@@ -446,12 +430,10 @@ static int stm32_qspi_probe(struct udevice *bus)
 {
 	struct stm32_qspi_platdata *plat = dev_get_platdata(bus);
 	struct stm32_qspi_priv *priv = dev_get_priv(bus);
-	struct dm_spi_bus *dm_spi_bus;
+	struct dm_spi_bus *dm_spi_bus = bus->uclass_priv;
 	struct clk clk;
 	struct reset_ctl reset_ctl;
 	int ret;
-
-	dm_spi_bus = bus->uclass_priv;
 
 	dm_spi_bus->max_hz = plat->max_hz;
 
@@ -506,33 +488,26 @@ static int stm32_qspi_remove(struct udevice *bus)
 
 static int stm32_qspi_claim_bus(struct udevice *dev)
 {
-	struct stm32_qspi_priv *priv;
-	struct udevice *bus;
-	struct dm_spi_slave_platdata *slave_plat;
-
-	bus = dev->parent;
-	priv = dev_get_priv(bus);
-	slave_plat = dev_get_parent_platdata(dev);
+	struct stm32_qspi_priv *priv = dev_get_priv(dev->parent);
+	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 
 	if (slave_plat->cs >= STM32_MAX_NORCHIP)
 		return -ENODEV;
 
-	_stm32_qspi_set_cs(priv, slave_plat->cs);
+	/* Set chip select */
+	clrsetbits_le32(&priv->regs->cr, STM32_QSPI_CR_FSEL,
+			slave_plat->cs ? STM32_QSPI_CR_FSEL : 0);
 
-	_stm32_qspi_enable(priv);
+	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_EN);
 
 	return 0;
 }
 
 static int stm32_qspi_release_bus(struct udevice *dev)
 {
-	struct stm32_qspi_priv *priv;
-	struct udevice *bus;
+	struct stm32_qspi_priv *priv = dev_get_priv(dev->parent);
 
-	bus = dev->parent;
-	priv = dev_get_priv(bus);
-
-	_stm32_qspi_disable(priv);
+	clrbits_le32(&priv->regs->cr, STM32_QSPI_CR_EN);
 
 	return 0;
 }
@@ -540,13 +515,8 @@ static int stm32_qspi_release_bus(struct udevice *dev)
 static int stm32_qspi_xfer(struct udevice *dev, unsigned int bitlen,
 			   const void *dout, void *din, unsigned long flags)
 {
-	struct stm32_qspi_priv *priv;
-	struct udevice *bus;
-	struct spi_flash *flash;
-
-	bus = dev->parent;
-	priv = dev_get_priv(bus);
-	flash = dev_get_uclass_priv(dev);
+	struct stm32_qspi_priv *priv = dev_get_priv(dev->parent);
+	struct spi_flash *flash = dev_get_uclass_priv(dev);
 
 	return _stm32_qspi_xfer(priv, flash, bitlen, (const u8 *)dout,
 				(u8 *)din, flags);
