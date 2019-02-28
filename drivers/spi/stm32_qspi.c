@@ -205,15 +205,6 @@ static void _stm32_qspi_wait_for_ftf(struct stm32_qspi_priv *priv)
 		;
 }
 
-static void _stm32_qspi_set_flash_size(struct stm32_qspi_priv *priv, u32 size)
-{
-	u32 fsize = fls(size) - 1;
-
-	clrsetbits_le32(&priv->regs->dcr,
-			STM32_QSPI_DCR_FSIZE_MASK << STM32_QSPI_DCR_FSIZE_SHIFT,
-			fsize << STM32_QSPI_DCR_FSIZE_SHIFT);
-}
-
 static void _stm32_qspi_set_cs(struct stm32_qspi_priv *priv, unsigned int cs)
 {
 	clrsetbits_le32(&priv->regs->cr, STM32_QSPI_CR_FSEL,
@@ -501,6 +492,10 @@ static int stm32_qspi_probe(struct udevice *bus)
 
 	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_SSHIFT);
 
+	/* Set dcr fsize to max address */
+	setbits_le32(&priv->regs->dcr,
+		     STM32_QSPI_DCR_FSIZE_MASK << STM32_QSPI_DCR_FSIZE_SHIFT);
+
 	return 0;
 }
 
@@ -513,20 +508,16 @@ static int stm32_qspi_claim_bus(struct udevice *dev)
 {
 	struct stm32_qspi_priv *priv;
 	struct udevice *bus;
-	struct spi_flash *flash;
 	struct dm_spi_slave_platdata *slave_plat;
 
 	bus = dev->parent;
 	priv = dev_get_priv(bus);
-	flash = dev_get_uclass_priv(dev);
 	slave_plat = dev_get_parent_platdata(dev);
 
 	if (slave_plat->cs >= STM32_MAX_NORCHIP)
 		return -ENODEV;
 
 	_stm32_qspi_set_cs(priv, slave_plat->cs);
-
-	_stm32_qspi_set_flash_size(priv, flash->size);
 
 	_stm32_qspi_enable(priv);
 
