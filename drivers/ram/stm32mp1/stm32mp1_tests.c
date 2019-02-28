@@ -1238,6 +1238,7 @@ static enum test_result test_read(struct stm32mp1_ddrctl *ctl,
 	u32 *addr;
 	u32 data;
 	u32 loop = 0;
+	int i, size = 1024 * 1024;
 	bool random = false;
 
 	if (get_addr(string, argc, argv, 0, (u32 *)&addr))
@@ -1256,14 +1257,19 @@ static enum test_result test_read(struct stm32mp1_ddrctl *ctl,
 	}
 
 	while (1) {
-		if (random)
-			addr = (u32 *)(STM32_DDR_BASE +
-			       (rand() & (STM32_DDR_SIZE - 1) & ~0x3));
-		data = readl(addr);
-		if (test_loop_end(&loop, 0, 1000))
+		for (i = 0; i < size; i++) {
+			if (random)
+				addr = (u32 *)(STM32_DDR_BASE +
+				       (rand() & (STM32_DDR_SIZE - 1) & ~0x3));
+			data = readl(addr);
+		}
+		if (test_loop_end(&loop, 0, 1))
 			break;
 	}
-	sprintf(string, "0x%x: %x", (u32)addr, data);
+	if (random)
+		sprintf(string, "%d loops random", loop);
+	else
+		sprintf(string, "%d loops at 0x%x: %x", loop, (u32)addr, data);
 
 	return TEST_PASSED;
 }
@@ -1282,6 +1288,7 @@ static enum test_result test_write(struct stm32mp1_ddrctl *ctl,
 	u32 *addr;
 	u32 data;
 	u32 loop = 0;
+	int i, size = 1024 * 1024;
 	bool random = false;
 
 	if (get_addr(string, argc, argv, 0, (u32 *)&addr))
@@ -1299,16 +1306,21 @@ static enum test_result test_write(struct stm32mp1_ddrctl *ctl,
 	}
 
 	while (1) {
-		if (random) {
-			addr = (u32 *)(STM32_DDR_BASE +
-			       (rand() & (STM32_DDR_SIZE - 1) & ~0x3));
-			data = rand();
+		for (i = 0; i < size; i++) {
+			if (random) {
+				addr = (u32 *)(STM32_DDR_BASE +
+				       (rand() & (STM32_DDR_SIZE - 1) & ~0x3));
+				data = rand();
+			}
+			writel(data, addr);
 		}
-		writel(data, addr);
-		if (test_loop_end(&loop, 0, 1000))
+		if (test_loop_end(&loop, 0, 1))
 			break;
 	}
-	sprintf(string, "0x%x: %x", (u32)addr, data);
+	if (random)
+		sprintf(string, "%d loops random", loop);
+	else
+		sprintf(string, "%d loops at 0x%x: %x", loop, (u32)addr, data);
 
 	return TEST_PASSED;
 }
