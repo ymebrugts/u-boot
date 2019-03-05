@@ -160,6 +160,7 @@ enum STM32_QSPI_CCR_FMODE {
 
 #define STM32_QSPI_FIFO_TIMEOUT_US 30000
 #define STM32_QSPI_CMD_TIMEOUT_US 1000000
+#define STM32_BUSY_TIMEOUT_US 100000
 
 struct stm32_qspi_platdata {
 	u32 base;
@@ -190,10 +191,18 @@ struct stm32_qspi_priv {
 #define CMD_HAS_DATA	BIT(26)
 };
 
-static void _stm32_qspi_wait_for_not_busy(struct stm32_qspi_priv *priv)
+static int _stm32_qspi_wait_for_not_busy(struct stm32_qspi_priv *priv)
 {
-	while (readl(&priv->regs->sr) & STM32_QSPI_SR_BUSY)
-		;
+	u32 sr;
+	int ret;
+
+	ret = readl_poll_timeout(&priv->regs->sr, sr,
+				 !(sr & STM32_QSPI_SR_BUSY),
+				 STM32_BUSY_TIMEOUT_US);
+	if (ret)
+		pr_err("busy timeout (stat:%#x)\n", sr);
+
+	return ret;
 }
 
 static unsigned int _stm32_qspi_gen_ccr(struct stm32_qspi_priv *priv, u8 fmode)
@@ -284,10 +293,8 @@ static int _stm32_qspi_wait_cmd(struct stm32_qspi_priv *priv, bool wait_nobusy)
 	u32 sr;
 	int ret;
 
-	if (wait_nobusy) {
-		_stm32_qspi_wait_for_not_busy(priv);
-		return 0;
-	}
+	if (wait_nobusy)
+		return _stm32_qspi_wait_for_not_busy(priv);
 
 	ret = readl_poll_timeout(&priv->regs->sr, sr,
 				 sr & STM32_QSPI_SR_TCF,
@@ -410,7 +417,9 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 			ccr_reg = _stm32_qspi_gen_ccr(priv,
 						      STM32_QSPI_CCR_IND_WRITE);
 
-			_stm32_qspi_wait_for_not_busy(priv);
+			ret = _stm32_qspi_wait_for_not_busy(priv);
+			if (ret)
+				return ret;
 
 			if (cmd_has_data)
 				_stm32_qspi_set_xfer_length(priv, words);
@@ -433,7 +442,9 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 	} else if (din) {
 		ccr_reg = _stm32_qspi_gen_ccr(priv, STM32_QSPI_CCR_IND_READ);
 
-		_stm32_qspi_wait_for_not_busy(priv);
+		ret = _stm32_qspi_wait_for_not_busy(priv);
+		if (ret)
+			return ret;
 
 		_stm32_qspi_set_xfer_length(priv, words);
 
@@ -610,6 +621,7 @@ static int stm32_qspi_set_speed(struct udevice *bus, uint speed)
 	u32 qspi_clk = priv->clock_rate;
 	u32 prescaler = 255;
 	u32 csht;
+	int ret;
 
 	if (speed > plat->max_hz)
 		speed = plat->max_hz;
@@ -625,7 +637,9 @@ static int stm32_qspi_set_speed(struct udevice *bus, uint speed)
 	csht = DIV_ROUND_UP((5 * qspi_clk) / (prescaler + 1), 100000000);
 	csht = (csht - 1) & STM32_QSPI_DCR_CSHT_MASK;
 
-	_stm32_qspi_wait_for_not_busy(priv);
+	ret = _stm32_qspi_wait_for_not_busy(priv);
+	if (ret)
+		return ret;
 
 	clrsetbits_le32(&priv->regs->cr,
 			STM32_QSPI_CR_PRESCALER_MASK <<
@@ -645,8 +659,11 @@ static int stm32_qspi_set_speed(struct udevice *bus, uint speed)
 static int stm32_qspi_set_mode(struct udevice *bus, uint mode)
 {
 	struct stm32_qspi_priv *priv = dev_get_priv(bus);
+	int ret;
 
-	_stm32_qspi_wait_for_not_busy(priv);
+	ret = _stm32_qspi_wait_for_not_busy(priv);
+	if (ret)
+		return ret;
 
 	if ((mode & SPI_CPHA) && (mode & SPI_CPOL))
 		setbits_le32(&priv->regs->dcr, STM32_QSPI_DCR_CKMODE);
