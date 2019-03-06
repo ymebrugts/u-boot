@@ -211,20 +211,21 @@ static int stm32_pinctrl_get_pin_muxing(struct udevice *dev,
 
 	return 0;
 }
+
 #endif
 
 int stm32_pinctrl_probe(struct udevice *dev)
 {
 	struct stm32_pinctrl_priv *priv = dev_get_priv(dev);
-	int err;
-
-	/* hwspinlock property is optional, just log the error */
-	err = hwspinlock_get_by_index(dev, 0, &priv->hws);
-	if (err)
-		debug("%s: hwspinlock_get_by_index may have failed (%d)\n",
-		      __func__, err);
+	int ret;
 
 	INIT_LIST_HEAD(&priv->gpio_dev);
+
+	/* hwspinlock property is optional, just log the error */
+	ret = hwspinlock_get_by_index(dev, 0, &priv->hws);
+	if (ret)
+		debug("%s: hwspinlock_get_by_index may have failed (%d)\n",
+		      __func__, ret);
 
 	return 0;
 }
@@ -234,7 +235,7 @@ static int stm32_gpio_config(struct gpio_desc *desc,
 {
 	struct stm32_gpio_priv *priv = dev_get_priv(desc->dev);
 	struct stm32_gpio_regs *regs = priv->regs;
-	struct stm32_pinctrl_priv *pinctrl_priv;
+	struct stm32_pinctrl_priv *ctrl_priv;
 	int ret;
 	u32 index;
 
@@ -242,9 +243,8 @@ static int stm32_gpio_config(struct gpio_desc *desc,
 	    ctl->pupd > 2 || ctl->speed > 3)
 		return -EINVAL;
 
-	pinctrl_priv = dev_get_priv(dev_get_parent(desc->dev));
-
-	ret = hwspinlock_lock_timeout(&pinctrl_priv->hws, 10);
+	ctrl_priv = dev_get_priv(dev_get_parent(desc->dev));
+	ret = hwspinlock_lock_timeout(&ctrl_priv->hws, 10);
 	if (ret == -ETIME) {
 		dev_err(desc->dev, "HWSpinlock timeout\n");
 		return ret;
@@ -264,7 +264,7 @@ static int stm32_gpio_config(struct gpio_desc *desc,
 	index = desc->offset;
 	clrsetbits_le32(&regs->otyper, OTYPE_MSK << index, ctl->otype << index);
 
-	hwspinlock_unlock(&pinctrl_priv->hws);
+	hwspinlock_unlock(&ctrl_priv->hws);
 
 	return 0;
 }
@@ -327,8 +327,8 @@ static int stm32_pinctrl_config(int offset)
 	int rv, len;
 
 	/*
-	 * check for "pinmux" property in each subnode of pin controller
-	 * phandle "pinctrl-0" (e.g. pins1 and pins2 for usart1)
+	 * check for "pinmux" property in each subnode (e.g. pins1 and pins2 for
+	 * usart1) of pin controller phandle "pinctrl-0"
 	 */
 	fdt_for_each_subnode(offset, gd->fdt_blob, offset) {
 		struct stm32_gpio_dsc gpio_dsc;
