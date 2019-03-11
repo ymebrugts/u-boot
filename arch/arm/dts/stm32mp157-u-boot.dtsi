@@ -150,13 +150,13 @@
 };
 
 &sdmmc1 {
-	compatible = "st,stm32-sdmmc2";
+	compatible = "st,stm32-sdmmc2", "arm,pl18x", "arm,primecell";
 };
 
 &sdmmc2 {
-	compatible = "st,stm32-sdmmc2";
+	compatible = "st,stm32-sdmmc2", "arm,pl18x", "arm,primecell";
 };
 
 &sdmmc3 {
-	compatible = "st,stm32-sdmmc2";
+	compatible = "st,stm32-sdmmc2", "arm,pl18x", "arm,primecell";
 };
