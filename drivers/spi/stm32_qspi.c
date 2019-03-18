@@ -18,6 +18,7 @@
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
 #include <linux/ioport.h>
+#include <linux/iopoll.h>
 
 struct stm32_qspi_regs {
 	u32 cr;		/* 0x00 */
@@ -157,6 +158,8 @@ enum STM32_QSPI_CCR_FMODE {
 
 #define STM32_QSPI_MAX_CHIP 2
 
+#define STM32_QSPI_FIFO_TIMEOUT_US 30000
+
 struct stm32_qspi_platdata {
 	u32 base;
 	u32 memory_map;
@@ -195,12 +198,6 @@ static void _stm32_qspi_wait_for_not_busy(struct stm32_qspi_priv *priv)
 static void _stm32_qspi_wait_for_complete(struct stm32_qspi_priv *priv)
 {
 	while (!(readl(&priv->regs->sr) & STM32_QSPI_SR_TCF))
-		;
-}
-
-static void _stm32_qspi_wait_for_ftf(struct stm32_qspi_priv *priv)
-{
-	while (!(readl(&priv->regs->sr) & STM32_QSPI_SR_FTF))
 		;
 }
 
@@ -287,13 +284,55 @@ static void _stm32_qspi_start_xfer(struct stm32_qspi_priv *priv, u32 cr_reg)
 		writel(priv->address, &priv->regs->ar);
 }
 
+static void _stm32_qspi_read_fifo(u8 *val, void __iomem *addr)
+{
+	*val = readb(addr);
+}
+
+static void _stm32_qspi_write_fifo(u8 *val, void __iomem *addr)
+{
+	writeb(*val, addr);
+}
+
+static int _stm32_qspi_poll(struct stm32_qspi_priv *priv,
+			    const u8 *dout, u8 *din, u32 len)
+{
+	void (*fifo)(u8 *val, void __iomem *addr);
+	u32 sr;
+	u8 *buf;
+	int ret;
+
+	if (din) {
+		fifo = _stm32_qspi_read_fifo;
+		buf = din;
+
+	} else {
+		fifo = _stm32_qspi_write_fifo;
+		buf = (u8 *)dout;
+	}
+
+	while (len--) {
+		ret = readl_poll_timeout(&priv->regs->sr, sr,
+					 sr & STM32_QSPI_SR_FTF,
+					 STM32_QSPI_FIFO_TIMEOUT_US);
+		if (ret) {
+			pr_err("fifo timeout (len:%d stat:%#x)\n", len, sr);
+			return ret;
+		}
+
+		fifo(buf++, &priv->regs->dr);
+	}
+
+	return 0;
+}
+
 static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 			    struct spi_flash *flash, unsigned int bitlen,
 			    const u8 *dout, u8 *din, unsigned long flags)
 {
 	unsigned int words = bitlen / 8;
 	u32 ccr_reg;
-	int i;
+	int ret;
 
 	if (flags & SPI_XFER_MMAP) {
 		_stm32_qspi_enable_mmap(priv, flash);
@@ -359,17 +398,9 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 			      __func__, priv->regs->ccr, priv->regs->ar);
 
 			if (priv->command & CMD_HAS_DATA) {
-				_stm32_qspi_wait_for_ftf(priv);
-
-				debug("%s: words:%d data:", __func__, words);
-
-				i = 0;
-				while (words > i) {
-					writeb(dout[i], &priv->regs->dr);
-					debug("%02x ", dout[i]);
-					i++;
-				}
-				debug("\n");
+				ret = _stm32_qspi_poll(priv, dout, NULL, words);
+				if (ret)
+					return ret;
 
 				_stm32_qspi_wait_for_complete(priv);
 			} else {
@@ -388,15 +419,11 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 		debug("%s: read: ccr:0x%08x adr:0x%08x len:%d\n", __func__,
 		      priv->regs->ccr, priv->regs->ar, priv->regs->dlr);
 
-		debug("%s: data:", __func__);
+		ret = _stm32_qspi_poll(priv, NULL, din, words);
+		if (ret)
+			return ret;
 
-		i = 0;
-		while (words > i) {
-			din[i] = readb(&priv->regs->dr);
-			debug("%02x ", din[i]);
-			i++;
-		}
-		debug("\n");
+		_stm32_qspi_wait_for_complete(priv);
 	}
 
 	return 0;
