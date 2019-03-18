@@ -15,6 +15,7 @@
 #include <reset.h>
 #include <spi.h>
 #include <spi_flash.h>
+#include <spi-mem.h>
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
 #include <linux/ioport.h>
@@ -161,6 +162,7 @@ enum STM32_QSPI_CCR_FMODE {
 #define STM32_QSPI_FIFO_TIMEOUT_US 30000
 #define STM32_QSPI_CMD_TIMEOUT_US 1000000
 #define STM32_BUSY_TIMEOUT_US 100000
+#define STM32_ABT_TIMEOUT_US 100000
 
 struct stm32_qspi_platdata {
 	u32 base;
@@ -465,6 +467,100 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 	return 0;
 }
 
+static int _stm32_qspi_tx(struct stm32_qspi_priv *priv,
+			  const struct spi_mem_op *op)
+{
+	if (!op->data.nbytes)
+		return 0;
+
+	if (op->data.dir == SPI_MEM_DATA_IN)
+		return _stm32_qspi_poll(priv, NULL, op->data.buf.in,
+					op->data.nbytes);
+
+	return _stm32_qspi_poll(priv, op->data.buf.out, NULL, op->data.nbytes);
+}
+
+static int _stm32_qspi_get_mode(u8 buswidth)
+{
+	if (buswidth == 4)
+		return 3;
+
+	return buswidth;
+}
+
+static int stm32_qspi_exec_op(struct spi_slave *slave,
+			      const struct spi_mem_op *op)
+{
+	struct stm32_qspi_priv *priv = dev_get_priv(slave->dev->parent);
+	u32 cr, ccr;
+	int timeout, ret;
+
+	debug("%s: cmd:%#x mode:%d.%d.%d.%d addr:%#llx len:%#x\n",
+	      __func__, op->cmd.opcode, op->cmd.buswidth, op->addr.buswidth,
+	      op->dummy.buswidth, op->data.buswidth,
+	      op->addr.val, op->data.nbytes);
+
+	ret = _stm32_qspi_wait_for_not_busy(priv);
+	if (ret)
+		return ret;
+
+	ccr = (STM32_QSPI_CCR_IND_WRITE << STM32_QSPI_CCR_FMODE_SHIFT);
+	if (op->data.dir == SPI_MEM_DATA_IN && op->data.nbytes)
+		ccr = (STM32_QSPI_CCR_IND_READ << STM32_QSPI_CCR_FMODE_SHIFT);
+
+	if (op->data.nbytes)
+		_stm32_qspi_set_xfer_length(priv, op->data.nbytes);
+
+	ccr |= op->cmd.opcode;
+	ccr |= (_stm32_qspi_get_mode(op->cmd.buswidth)
+		<< STM32_QSPI_CCR_IMODE_SHIFT);
+
+	if (op->addr.nbytes) {
+		ccr |= ((op->addr.nbytes - 1) << STM32_QSPI_CCR_ADSIZE_SHIFT);
+		ccr |= (_stm32_qspi_get_mode(op->addr.buswidth)
+			<< STM32_QSPI_CCR_ADMODE_SHIFT);
+	}
+
+	if (op->dummy.buswidth && op->dummy.nbytes)
+		ccr |= (op->dummy.nbytes * 8 / op->dummy.buswidth
+			<< STM32_QSPI_CCR_DCYC_SHIFT);
+
+	if (op->data.nbytes)
+		ccr |= (_stm32_qspi_get_mode(op->data.buswidth)
+			<< STM32_QSPI_CCR_DMODE_SHIFT);
+
+	writel(ccr, &priv->regs->ccr);
+
+	if (op->addr.nbytes)
+		writel(op->addr.val, &priv->regs->ar);
+
+	ret = _stm32_qspi_tx(priv, op);
+	if (ret)
+		goto abort;
+
+	/* wait end of tx in indirect mode */
+	ret = _stm32_qspi_wait_cmd(priv, !op->data.nbytes);
+	if (ret)
+		goto abort;
+
+	return 0;
+
+abort:
+	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_ABORT);
+
+	/* wait clear of abort bit by hw */
+	timeout = readl_poll_timeout(&priv->regs->cr, cr,
+				     !(cr & STM32_QSPI_CR_ABORT),
+				     STM32_ABT_TIMEOUT_US);
+
+	writel(STM32_QSPI_FCR_CTCF, &priv->regs->fcr);
+
+	if (ret || timeout)
+		debug("%s ret:%d abort timeout:%d\n", __func__, ret, timeout);
+
+	return ret;
+}
+
 static int stm32_qspi_ofdata_to_platdata(struct udevice *bus)
 {
 	struct resource res_regs, res_mem;
@@ -708,12 +804,17 @@ static int stm32_qspi_set_mode(struct udevice *bus, uint mode)
 	return 0;
 }
 
+static const struct spi_controller_mem_ops stm32_qspi_mem_ops = {
+	.exec_op = stm32_qspi_exec_op,
+};
+
 static const struct dm_spi_ops stm32_qspi_ops = {
 	.claim_bus	= stm32_qspi_claim_bus,
 	.release_bus	= stm32_qspi_release_bus,
 	.xfer		= stm32_qspi_xfer,
 	.set_speed	= stm32_qspi_set_speed,
 	.set_mode	= stm32_qspi_set_mode,
+	.mem_ops	= &stm32_qspi_mem_ops,
 };
 
 static const struct udevice_id stm32_qspi_ids[] = {
