@@ -155,7 +155,7 @@ enum STM32_QSPI_CCR_FMODE {
 /* default SCK frequency, unit: HZ */
 #define STM32_QSPI_DEFAULT_SCK_FREQ 108000000
 
-#define STM32_MAX_NORCHIP 2
+#define STM32_QSPI_MAX_CHIP 2
 
 struct stm32_qspi_platdata {
 	u32 base;
@@ -163,11 +163,20 @@ struct stm32_qspi_platdata {
 	u32 max_hz;
 };
 
+struct stm32_qspi_flash {
+	u32 cr;
+	u32 dcr;
+	u32 mode;
+	bool initialized;
+};
+
 struct stm32_qspi_priv {
 	struct stm32_qspi_regs *regs;
+	struct stm32_qspi_flash flash[STM32_QSPI_MAX_CHIP];
 	ulong clock_rate;
 	u32 max_hz;
 	u32 mode;
+	int cs_used;
 
 	u32 command;
 	u32 address;
@@ -438,7 +447,7 @@ static int stm32_qspi_probe(struct udevice *bus)
 	dm_spi_bus->max_hz = plat->max_hz;
 
 	priv->regs = (struct stm32_qspi_regs *)(uintptr_t)plat->base;
-
+	priv->cs_used = -1;
 	priv->max_hz = plat->max_hz;
 
 	ret = clk_get_by_index(bus, 0, &clk);
@@ -491,12 +500,32 @@ static int stm32_qspi_claim_bus(struct udevice *dev)
 	struct stm32_qspi_priv *priv = dev_get_priv(dev->parent);
 	struct dm_spi_slave_platdata *slave_plat = dev_get_parent_platdata(dev);
 
-	if (slave_plat->cs >= STM32_MAX_NORCHIP)
+	if (slave_plat->cs >= STM32_QSPI_MAX_CHIP)
 		return -ENODEV;
 
-	/* Set chip select */
-	clrsetbits_le32(&priv->regs->cr, STM32_QSPI_CR_FSEL,
-			slave_plat->cs ? STM32_QSPI_CR_FSEL : 0);
+	if (priv->cs_used != slave_plat->cs) {
+		struct stm32_qspi_flash *flash = &priv->flash[slave_plat->cs];
+
+		priv->cs_used = slave_plat->cs;
+
+		if (flash->initialized) {
+			/* Set the configuration: speed + mode + cs */
+			writel(flash->cr, &priv->regs->cr);
+			writel(flash->dcr, &priv->regs->dcr);
+			priv->mode = flash->mode;
+		} else {
+			/* Set chip select */
+			clrsetbits_le32(&priv->regs->cr, STM32_QSPI_CR_FSEL,
+					priv->cs_used ? STM32_QSPI_CR_FSEL : 0);
+
+			/* Save the configuration: speed + mode + cs */
+			flash->cr = readl(&priv->regs->cr);
+			flash->dcr = readl(&priv->regs->dcr);
+			flash->mode = priv->mode;
+
+			flash->initialized = true;
+		}
+	}
 
 	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_EN);
 
