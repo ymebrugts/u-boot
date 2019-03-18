@@ -159,6 +159,7 @@ enum STM32_QSPI_CCR_FMODE {
 #define STM32_QSPI_MAX_CHIP 2
 
 #define STM32_QSPI_FIFO_TIMEOUT_US 30000
+#define STM32_QSPI_CMD_TIMEOUT_US 1000000
 
 struct stm32_qspi_platdata {
 	u32 base;
@@ -192,12 +193,6 @@ struct stm32_qspi_priv {
 static void _stm32_qspi_wait_for_not_busy(struct stm32_qspi_priv *priv)
 {
 	while (readl(&priv->regs->sr) & STM32_QSPI_SR_BUSY)
-		;
-}
-
-static void _stm32_qspi_wait_for_complete(struct stm32_qspi_priv *priv)
-{
-	while (!(readl(&priv->regs->sr) & STM32_QSPI_SR_TCF))
 		;
 }
 
@@ -282,6 +277,32 @@ static void _stm32_qspi_start_xfer(struct stm32_qspi_priv *priv, u32 cr_reg)
 
 	if (priv->command & CMD_HAS_ADR)
 		writel(priv->address, &priv->regs->ar);
+}
+
+static int _stm32_qspi_wait_cmd(struct stm32_qspi_priv *priv, bool wait_nobusy)
+{
+	u32 sr;
+	int ret;
+
+	if (wait_nobusy) {
+		_stm32_qspi_wait_for_not_busy(priv);
+		return 0;
+	}
+
+	ret = readl_poll_timeout(&priv->regs->sr, sr,
+				 sr & STM32_QSPI_SR_TCF,
+				 STM32_QSPI_CMD_TIMEOUT_US);
+	if (ret) {
+		pr_err("cmd timeout (stat:%#x)\n", sr);
+	} else if (readl(&priv->regs->sr) & STM32_QSPI_SR_TEF) {
+		pr_err("transfer error (stat:%#x)\n", sr);
+		ret = -EIO;
+	}
+
+	/* clear flags */
+	writel(STM32_QSPI_FCR_CTCF | STM32_QSPI_FCR_CTEF, &priv->regs->fcr);
+
+	return ret;
 }
 
 static void _stm32_qspi_read_fifo(u8 *val, void __iomem *addr)
@@ -384,12 +405,14 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 		}
 
 		if (flags & SPI_XFER_END) {
+			bool cmd_has_data = priv->command & CMD_HAS_DATA;
+
 			ccr_reg = _stm32_qspi_gen_ccr(priv,
 						      STM32_QSPI_CCR_IND_WRITE);
 
 			_stm32_qspi_wait_for_not_busy(priv);
 
-			if (priv->command & CMD_HAS_DATA)
+			if (cmd_has_data)
 				_stm32_qspi_set_xfer_length(priv, words);
 
 			_stm32_qspi_start_xfer(priv, ccr_reg);
@@ -397,15 +420,15 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 			debug("%s: write: ccr:0x%08x adr:0x%08x\n",
 			      __func__, priv->regs->ccr, priv->regs->ar);
 
-			if (priv->command & CMD_HAS_DATA) {
+			if (cmd_has_data) {
 				ret = _stm32_qspi_poll(priv, dout, NULL, words);
 				if (ret)
 					return ret;
-
-				_stm32_qspi_wait_for_complete(priv);
-			} else {
-				_stm32_qspi_wait_for_not_busy(priv);
 			}
+
+			ret = _stm32_qspi_wait_cmd(priv, !cmd_has_data);
+			if (ret)
+				return ret;
 		}
 	} else if (din) {
 		ccr_reg = _stm32_qspi_gen_ccr(priv, STM32_QSPI_CCR_IND_READ);
@@ -423,7 +446,9 @@ static int _stm32_qspi_xfer(struct stm32_qspi_priv *priv,
 		if (ret)
 			return ret;
 
-		_stm32_qspi_wait_for_complete(priv);
+		ret = _stm32_qspi_wait_cmd(priv, false);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
