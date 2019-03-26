@@ -577,6 +577,9 @@ int board_interface_eth_init(int interface_type, bool eth_clk_sel_reg,
 		debug("%s: PHY_INTERFACE_MODE_RMII\n", __func__);
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		if (eth_clk_sel_reg)
 			value = SYSCFG_PMCSETR_ETH_SEL_RGMII |
 				SYSCFG_PMCSETR_ETH_CLK_SEL;
