@@ -73,8 +73,8 @@
 			no-map;
 		};
 
-		gpu_reserved: gpu@dc000000 {
-			reg = <0xdc000000 0x4000000>;
+		gpu_reserved: gpu@d4000000 {
+			reg = <0xd4000000 0x4000000>;
 			no-map;
 		};
 	};
@@ -180,7 +180,7 @@
 	pinctrl-0 = <&ethernet0_rgmii_pins_a>;
 	pinctrl-1 = <&ethernet0_rgmii_pins_sleep_a>;
 	pinctrl-names = "default", "sleep";
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 	max-speed = <1000>;
 	phy-handle = <&phy0>;
 
@@ -296,7 +296,6 @@
 		interrupt-parent = <&gpioi>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&stusb1600_pins_a>;
-
 		status = "okay";
 
 		typec_con: connector {
