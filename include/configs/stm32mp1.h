@@ -48,7 +48,7 @@
 /*
  * Env parameters
  */
-#define CONFIG_ENV_SIZE				SZ_4K
+#define CONFIG_ENV_SIZE				SZ_8K
 
 #if defined(CONFIG_ENV_IS_IN_UBI)
 #define	CONFIG_ENV_UBI_PART			"UBI"
