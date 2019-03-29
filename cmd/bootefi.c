@@ -625,7 +625,7 @@ void efi_set_bootdev(const char *dev, const char *devnr, const char *path)
 
 		part = blk_get_device_part_str(dev, devnr, &desc, &fs_partition,
 					       1);
-		if (part < 0)
+		if (part < 0 || !desc)
 			return;
 
 		bootefi_device_path = efi_dp_from_part(desc, part);
