@@ -146,11 +146,9 @@
  * for nor boot, use the default order
  */
 #define CONFIG_PREBOOT
-#undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND \
-	"echo \"Boot over ${boot_device}${boot_instance}!\";run bootcmd_stm32mp"
 
 #define STM32MP_BOOTCMD "bootcmd_stm32mp=" \
+	"echo \"Boot over ${boot_device}${boot_instance}!\";" \
 	"if test ${boot_device} = serial || test ${boot_device} = usb;" \
 	"then stm32prog ${boot_device} ${boot_instance}; " \
 	"else " \
