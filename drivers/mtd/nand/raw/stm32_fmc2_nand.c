@@ -1049,7 +1049,7 @@ static int stm32_fmc2_probe(struct udevice *dev)
 	oob_index = FMC2_BBM_LEN;
 	for (i = 0; i < ecclayout->eccbytes; i++, oob_index++)
 		ecclayout->eccpos[i] = oob_index;
-	ecclayout->oobfree->offset = oob_index + 1;
+	ecclayout->oobfree->offset = oob_index;
 	ecclayout->oobfree->length = mtd->oobsize - ecclayout->oobfree->offset;
 	chip->ecc.layout = ecclayout;
 
