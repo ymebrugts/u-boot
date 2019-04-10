@@ -906,6 +906,7 @@ void board_quiesce_devices(void)
 #ifdef CONFIG_SYS_MTDPARTS_RUNTIME
 
 #define MTDPARTS_LEN		256
+#define MTDIDS_LEN		128
 
 /**
  * The mtdparts_nand0 and mtdparts_nor0 variable tends to be long.
@@ -915,7 +916,7 @@ void board_quiesce_devices(void)
  * @param buf temporary buffer pointer MTDPARTS_LEN long
  * @return mtdparts variable string, NULL if not found
  */
-static const char *env_get_mtdparts(char *str, char *buf)
+static const char *env_get_mtdparts(const char *str, char *buf)
 {
 	if (gd->flags & GD_FLG_ENV_READY)
 		return env_get(str);
@@ -924,40 +925,64 @@ static const char *env_get_mtdparts(char *str, char *buf)
 	return NULL;
 }
 
+/**
+ * update the variables "mtdids" and "mtdparts" with content of mtdparts_<dev>
+ */
+static void board_get_mtdparts(const char *dev,
+			       char *mtdids,
+			       char *mtdparts)
+{
+	char env_name[32] = "mtdparts_";
+	char tmp_mtdparts[MTDPARTS_LEN];
+	const char *tmp;
+
+	/* name of env variable to read = mtdparts_<dev> */
+	strcat(env_name, dev);
+	tmp = env_get_mtdparts(env_name, tmp_mtdparts);
+	if (tmp) {
+		/* mtdids: "<dev>=<dev>, ...." */
+		if (mtdids[0] != '\0')
+			strcat(mtdids, ",");
+		strcat(mtdids, dev);
+		strcat(mtdids, "=");
+		strcat(mtdids, dev);
+
+		/* mtdparts: "mtdparts=<dev>:<mtdparts_<dev>>;..." */
+		if (mtdparts[0] != '\0')
+			strncat(mtdparts, ";", MTDPARTS_LEN);
+		else
+			strcat(mtdparts, "mtdparts=");
+		strncat(mtdparts, dev, MTDPARTS_LEN);
+		strncat(mtdparts, ":", MTDPARTS_LEN);
+		strncat(mtdparts, tmp, MTDPARTS_LEN);
+	}
+}
+
 void board_mtdparts_default(const char **mtdids, const char **mtdparts)
 {
 	struct udevice *dev;
-	char s_nand0[128] = {0}, s_nor0[128] = {0};
-	char mtdparts_buf[MTDPARTS_LEN];
-	const char *temp;
-	static char parts[256];
-	static char ids[22];
+	static char parts[2 * MTDPARTS_LEN + 1];
+	static char ids[MTDIDS_LEN + 1];
+	static bool mtd_initialized;
+
+	if (mtd_initialized) {
+		*mtdids = ids;
+		*mtdparts = parts;
+		return;
+	}
+
+	memset(parts, 0, sizeof(parts));
+	memset(ids, 0, sizeof(ids));
 
 	if (!uclass_get_device(UCLASS_MTD, 0, &dev)) {
-		temp = env_get_mtdparts("mtdparts_nand0", mtdparts_buf);
-		if (temp)
-			snprintf(s_nand0, sizeof(s_nand0), temp);
+		board_get_mtdparts("nand0", ids, parts);
 	}
 
 	if (!uclass_get_device(UCLASS_SPI_FLASH, 0, &dev)) {
-		temp = env_get_mtdparts("mtdparts_nor0", mtdparts_buf);
-		if (temp)
-			snprintf(s_nor0, sizeof(s_nor0), temp);
+		board_get_mtdparts("nor0", ids, parts);
 	}
 
-	strcpy(ids, "");
-	strcpy(parts, "");
-	if (strlen(s_nand0) && strlen(s_nor0)) {
-		snprintf(ids, sizeof(ids), "nor0=nor0,nand0=nand0");
-		snprintf(parts, sizeof(parts),
-			 "mtdparts=nor0:%s;nand0:%s", s_nor0, s_nand0);
-	} else if (strlen(s_nand0)) {
-		snprintf(ids, sizeof(ids), "nand0=nand0");
-		snprintf(parts, sizeof(parts), "mtdparts=nand0:%s", s_nand0);
-	} else if (strlen(s_nor0)) {
-		snprintf(ids, sizeof(ids), "nor0=nor0");
-		snprintf(parts, sizeof(parts), "mtdparts=nor0:%s", s_nor0);
-	}
+	mtd_initialized = true;
 	*mtdids = ids;
 	*mtdparts = parts;
 	debug("%s:mtdids=%s & mtdparts=%s\n", __func__, ids, parts);
