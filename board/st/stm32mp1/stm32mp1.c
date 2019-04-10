@@ -14,6 +14,7 @@
 #include <i2c.h>
 #include <led.h>
 #include <misc.h>
+#include <mtd.h>
 #include <mtd_node.h>
 #include <phy.h>
 #include <remoteproc.h>
@@ -960,8 +961,9 @@ static void board_get_mtdparts(const char *dev,
 
 void board_mtdparts_default(const char **mtdids, const char **mtdparts)
 {
+	struct mtd_info *mtd;
 	struct udevice *dev;
-	static char parts[2 * MTDPARTS_LEN + 1];
+	static char parts[3 * MTDPARTS_LEN + 1];
 	static char ids[MTDIDS_LEN + 1];
 	static bool mtd_initialized;
 
@@ -974,8 +976,23 @@ void board_mtdparts_default(const char **mtdids, const char **mtdparts)
 	memset(parts, 0, sizeof(parts));
 	memset(ids, 0, sizeof(ids));
 
-	if (!uclass_get_device(UCLASS_MTD, 0, &dev)) {
+	/* probe all MTD devices */
+	for (uclass_first_device(UCLASS_MTD, &dev);
+	     dev;
+	     uclass_next_device(&dev)) {
+		pr_debug("mtd device = %s\n", dev->name);
+	}
+
+	mtd = get_mtd_device_nm("nand0");
+	if (!IS_ERR_OR_NULL(mtd)) {
 		board_get_mtdparts("nand0", ids, parts);
+		put_mtd_device(mtd);
+	}
+
+	mtd = get_mtd_device_nm("spi-nand0");
+	if (!IS_ERR_OR_NULL(mtd)) {
+		board_get_mtdparts("spi-nand0", ids, parts);
+		put_mtd_device(mtd);
 	}
 
 	if (!uclass_get_device(UCLASS_SPI_FLASH, 0, &dev)) {
