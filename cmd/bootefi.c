@@ -190,13 +190,13 @@ static efi_status_t copy_fdt(ulong *fdt_addrp, ulong *fdt_sizep)
 	/* Safe fdt location is at 127MB */
 	new_fdt_addr = fdt_ram_start + (127 * 1024 * 1024) + fdt_size;
 	ret = efi_allocate_pages(EFI_ALLOCATE_MAX_ADDRESS,
-				 EFI_RUNTIME_SERVICES_DATA, fdt_pages,
+				 EFI_BOOT_SERVICES_DATA, fdt_pages,
 				 &new_fdt_addr);
 	if (ret != EFI_SUCCESS) {
 		/* If we can't put it there, put it somewhere */
 		new_fdt_addr = (ulong)memalign(EFI_PAGE_SIZE, fdt_size);
 		ret = efi_allocate_pages(EFI_ALLOCATE_MAX_ADDRESS,
-					 EFI_RUNTIME_SERVICES_DATA, fdt_pages,
+					 EFI_BOOT_SERVICES_DATA, fdt_pages,
 					 &new_fdt_addr);
 		if (ret != EFI_SUCCESS) {
 			printf("ERROR: Failed to reserve space for FDT\n");
