@@ -5,17 +5,20 @@
 #include <config.h>
 #include <common.h>
 #include <adc.h>
+#include <bootm.h>
 #include <dm.h>
 #include <clk.h>
 #include <console.h>
 #include <environment.h>
 #include <fdt_support.h>
 #include <generic-phy.h>
+#include <g_dnl.h>
 #include <i2c.h>
 #include <led.h>
 #include <misc.h>
 #include <mtd.h>
 #include <mtd_node.h>
+#include <netdev.h>
 #include <phy.h>
 #include <remoteproc.h>
 #include <reset.h>
@@ -161,7 +164,7 @@ static void board_key_check(void)
 #endif
 }
 
-bool board_is_dk2(void)
+static __maybe_unused bool board_is_dk2(void)
 {
 	if (of_machine_is_compatible("st,stm32mp157c-dk2"))
 		return true;
@@ -190,14 +193,14 @@ int board_late_init(void)
 
 #ifdef CONFIG_STM32_SDMMC2
 /* this is a weak define that we are overriding */
-int board_mmc_init(void)
+static int board_mmc_init(void)
 {
 	return 0;
 }
 #endif
 
 #ifdef CONFIG_STM32_QSPI
-void board_qspi_init(void)
+static void board_qspi_init(void)
 {
 }
 #endif /* CONFIG_STM32_QSPI */
@@ -273,7 +276,7 @@ static int stusb1600_cable_connected(void)
 	return status & STUSB1600_CC_ATTACH;
 }
 
-void board_usbotg_init(void)
+static void board_usbotg_init(void)
 {
 	ofnode usb1600_node;
 	int node;
@@ -1090,7 +1093,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 }
 #endif
 
-void board_stm32copro_image_process(ulong fw_image, size_t fw_size)
+static void board_stm32copro_image_process(ulong fw_image, size_t fw_size)
 {
 	int ret, id = 0; /* Copro id fixed to 0 as only one coproc on mp1 */
 	unsigned int rsc_size;
