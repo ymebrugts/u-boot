@@ -49,12 +49,14 @@
 /* RAW parttion (binary / bootloader) used Linux - reserved UUID */
 #define LINUX_RESERVED_UUID "8DA63339-0007-60C0-C436-083AC8230908"
 
+#define DFU_DEV_UNDEFINED	0xFFFF
+
 /*
  * unique partition guid (uuid) for partition named "rootfs"
  * on each MMC instance = SD Card or eMMC
  * allow fixed kernel bootcmd: "rootf=PARTUID=e91c4e10-..."
  */
-const static efi_guid_t uuid_mmc[3] = {
+static const efi_guid_t uuid_mmc[3] = {
 	ROOTFS_MMC0_UUID,
 	ROOTFS_MMC1_UUID,
 	ROOTFS_MMC2_UUID
@@ -92,7 +94,7 @@ char *stm32prog_get_error(struct stm32prog_data *data)
 u8 stm32prog_header_check(struct raw_header_s *raw_header,
 			  struct image_header_s *header)
 {
-	int i;
+	unsigned int i;
 
 	header->present = 0;
 	header->image_checksum = 0x0;
@@ -264,7 +266,7 @@ static int parse_ip(struct stm32prog_data *data,
 		    char *p, struct stm32prog_part_t *part)
 {
 	int result = 0;
-	int len = 0;
+	unsigned int len = 0;
 
 	part->dev_id = 0;
 	if (!strcmp(p, "none")) {
@@ -434,7 +436,7 @@ static int parse_flash_layout(struct stm32prog_data *data,
 					eof = true;
 				continue;
 			}
-			/* no break */
+			/* fall through */
 		/* by default continue with the next character */
 		default:
 			p++;
@@ -772,7 +774,7 @@ static int treat_partition_list(struct stm32prog_data *data)
 	struct stm32prog_part_t *part;
 
 	for (j = 0; j < STM32PROG_MAX_DEV; j++) {
-		data->dev[j].dev_type = -1;
+		data->dev[j].dev_type = DFU_DEV_UNDEFINED;
 		INIT_LIST_HEAD(&data->dev[j].part_list);
 	}
 
@@ -815,7 +817,7 @@ static int treat_partition_list(struct stm32prog_data *data)
 			}
 		}
 		for (j = 0; j < STM32PROG_MAX_DEV; j++) {
-			if (data->dev[j].dev_type == -1) {
+			if (data->dev[j].dev_type == DFU_DEV_UNDEFINED) {
 				/* new device found */
 				data->dev[j].dev_type = part->dev_type;
 				data->dev[j].dev_id = part->dev_id;
@@ -844,7 +846,8 @@ static int create_partitions(struct stm32prog_data *data)
 	char buf[ENV_BUF_LEN];
 	char uuid[UUID_STR_LEN + 1];
 	unsigned char *uuid_bin;
-	int i, mmc_id;
+	unsigned int mmc_id;
+	int i;
 	bool rootfs_found;
 	struct stm32prog_part_t *part;
 
@@ -1521,7 +1524,7 @@ static int part_delete(struct stm32prog_data *data,
 	return ret;
 }
 
-void stm32prog_devices_init(struct stm32prog_data *data)
+static void stm32prog_devices_init(struct stm32prog_data *data)
 {
 	int i;
 	int ret;
