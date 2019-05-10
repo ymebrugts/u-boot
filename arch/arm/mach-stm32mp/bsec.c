@@ -359,12 +359,13 @@ static int stm32mp_bsec_read(struct udevice *dev, int offset,
 	bool shadow = true;
 	int nb_otp = size / sizeof(u32);
 	int otp;
+	unsigned int offs = offset;
 
-	if (offset >= STM32_BSEC_OTP_OFFSET) {
-		offset -= STM32_BSEC_OTP_OFFSET;
+	if (offs >= STM32_BSEC_OTP_OFFSET) {
+		offs -= STM32_BSEC_OTP_OFFSET;
 		shadow = false;
 	}
-	otp = offset / sizeof(u32);
+	otp = offs / sizeof(u32);
 
 	if (otp < 0 || (otp + nb_otp - 1) > BSEC_OTP_MAX_VALUE) {
 		dev_err(dev, "wrong value for otp, max value : %i\n",
@@ -394,12 +395,13 @@ static int stm32mp_bsec_write(struct udevice *dev, int offset,
 	bool shadow = true;
 	int nb_otp = size / sizeof(u32);
 	int otp;
+	unsigned int offs = offset;
 
-	if (offset >= STM32_BSEC_OTP_OFFSET) {
-		offset -= STM32_BSEC_OTP_OFFSET;
+	if (offs >= STM32_BSEC_OTP_OFFSET) {
+		offs -= STM32_BSEC_OTP_OFFSET;
 		shadow = false;
 	}
-	otp = offset / sizeof(u32);
+	otp = offs / sizeof(u32);
 
 	if (otp < 0 || (otp + nb_otp - 1) > BSEC_OTP_MAX_VALUE) {
 		dev_err(dev, "wrong value for otp, max value : %d\n",
