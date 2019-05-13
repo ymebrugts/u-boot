@@ -639,7 +639,7 @@ static void wait_operating_mode(struct ddr_info *priv, int mode)
 }
 
 /* Mode Register Writes (MRW or MRS) */
-void mode_register_write(struct ddr_info *priv, u8 addr, u16 data)
+static void mode_register_write(struct ddr_info *priv, u8 addr, u16 data)
 {
 	u32 mrctrl0;
 
