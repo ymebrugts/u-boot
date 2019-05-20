@@ -5,6 +5,7 @@
  */
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/reset/stm32mp1-resets.h>
 
 / {
@@ -132,12 +133,6 @@
 			thermal-sensors = <&dts>;
 
 			trips {
-				cpu_alert1: cpu-alert1 {
-					temperature = <85000>;
-					hysteresis = <0>;
-					type = "passive";
-				};
-
 				cpu-crit {
 					temperature = <120000>;
 					hysteresis = <0>;
@@ -204,6 +199,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -232,6 +228,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -258,6 +255,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -286,6 +284,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -343,6 +342,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -364,6 +364,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -385,6 +386,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -624,7 +626,7 @@
 			compatible = "st,stm32-cec";
 			reg = <0x40016000 0x400>;
 			interrupts = <GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&rcc CEC_K>, <&clk_lse>;
+			clocks = <&rcc CEC_K>, <&rcc CEC>;
 			clock-names = "cec", "hdmi-cec";
 			power-domains = <&pd_core>;
 			status = "disabled";
@@ -700,6 +702,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -730,6 +733,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -810,6 +814,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -834,6 +839,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 			timer@15 {
@@ -857,6 +863,7 @@
 
 			pwm {
 				compatible = "st,stm32-pwm";
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
@@ -1084,6 +1091,7 @@
 				     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc DMA1>;
+			resets = <&rcc DMA1_R>;
 			#dma-cells = <4>;
 			st,mem2mem;
 			dma-requests = <8>;
@@ -1110,6 +1118,7 @@
 				     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc DMA2>;
+			resets = <&rcc DMA2_R>;
 			#dma-cells = <4>;
 			st,mem2mem;
 			dma-requests = <8>;
@@ -1132,6 +1141,7 @@
 			dma-masters = <&dma1 &dma2>;
 			dma-channels = <16>;
 			clocks = <&rcc DMAMUX>;
+			resets = <&rcc DMAMUX_R>;
 		};
 
 		adc: adc@48003000 {
@@ -1232,12 +1242,16 @@
 			clock-names = "otg";
 			resets = <&rcc USBO_R>;
 			reset-names = "dwc2";
-			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts-extended = <&intc GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>,
+					      <&exti 44 1>;
+			interrupt-names = "event", "wakeup";
 			g-rx-fifo-size = <256>;
 			g-np-tx-fifo-size = <32>;
 			g-tx-fifo-size = <128 128 64 64 64 64 32 32>;
 			dr_mode = "otg";
 			usb33d-supply = <&usb33>;
+			power-domains = <&pd_core>;
+			wakeup-source;
 			status = "disabled";
 		};
 
@@ -1641,7 +1655,7 @@
 			interrupts = <GIC_SPI 80 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc HASH1>;
 			resets = <&rcc HASH1_R>;
-			dmas = <&mdma1 31 0x10 0x1000A02 0x0 0x0 0x0 0x0>;
+			dmas = <&mdma1 31 0x10 0x1000A02 0x0 0x0 0x0>;
 			dma-names = "in";
 			dma-maxburst = <2>;
 			status = "disabled";
@@ -1660,6 +1674,7 @@
 			reg = <0x58000000 0x1000>;
 			interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&rcc MDMA>;
+			resets = <&rcc MDMA_R>;
 			#dma-cells = <6>;
 			dma-channels = <32>;
 			dma-requests = <48>;
@@ -1782,8 +1797,12 @@
 			reg = <0x5800d000 0x1000>;
 			clocks = <&rcc USBH>;
 			resets = <&rcc USBH_R>;
-			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts-extended = <&intc GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>,
+					      <&exti 43 1>;
+			interrupt-names = "event", "wakeup";
 			companion = <&usbh_ohci>;
+			power-domains = <&pd_core>;
+			wakeup-source;
 			status = "disabled";
 		};
 
@@ -1848,6 +1867,15 @@
 				#phy-cells = <1>;
 				reg = <1>;
 			};
+		};
+
+		ddrperfm: perf@5a007000 {
+			compatible = "st,stm32-ddr-pmu";
+			reg = <0x5a007000 0x400>;
+			clocks = <&rcc DDRPERFM>, <&rcc PLL2_R>;
+			clock-names = "bus", "ddr";
+			resets = <&rcc DDRPERFM_R>;
+			status = "okay";
 		};
 
 		usart1: serial@5c000000 {

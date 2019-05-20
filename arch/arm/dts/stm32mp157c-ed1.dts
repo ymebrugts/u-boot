@@ -8,7 +8,6 @@
 #include "stm32mp157c.dtsi"
 #include "stm32mp157c-m4-srm.dtsi"
 #include "stm32mp157caa-pinctrl.dtsi"
-#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/mfd/st,stpmic1.h>
 
 / {
@@ -337,6 +336,7 @@
 	interrupt-parent = <&exti>;
 	interrupts = <68 1>;
 	interrupt-names = "wdg";
+	wakeup-source;
 	recovery;
 	status = "okay";
 };
@@ -344,6 +344,7 @@
 &pwr {
 	pwr-regulators {
 		vdd-supply = <&vdd>;
+		vdd_3v3_usbfs-supply = <&vdd_usb>;
 	};
 };
 
