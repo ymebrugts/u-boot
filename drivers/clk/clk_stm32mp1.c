@@ -2066,22 +2066,22 @@ static int stm32mp1_clk_probe(struct udevice *dev)
 		stm32mp1_clk_dump(priv);
 #endif
 
+	gd->cpu_clk = stm32mp1_clk_get(priv, _CK_MPU);
+	gd->bus_clk = stm32mp1_clk_get(priv, _ACLK);
+	/* DDRPHYC father */
+	gd->mem_clk = stm32mp1_clk_get(priv, _PLL2_R);
 #if defined(CONFIG_DISPLAY_CPUINFO)
 	if (gd->flags & GD_FLG_RELOC) {
 		char buf[32];
 
 		printf("Clocks:\n");
-		printf("- MPU : %s MHz\n",
-		       strmhz(buf, stm32mp1_clk_get(priv, _CK_MPU)));
+		printf("- MPU : %s MHz\n", strmhz(buf, gd->cpu_clk));
 		printf("- MCU : %s MHz\n",
 		       strmhz(buf, stm32mp1_clk_get(priv, _CK_MCU)));
-		printf("- AXI : %s MHz\n",
-		       strmhz(buf, stm32mp1_clk_get(priv, _ACLK)));
+		printf("- AXI : %s MHz\n", strmhz(buf, gd->bus_clk));
 		printf("- PER : %s MHz\n",
 		       strmhz(buf, stm32mp1_clk_get(priv, _CK_PER)));
-		/* DDRPHYC father */
-		printf("- DDR : %s MHz\n",
-		       strmhz(buf, stm32mp1_clk_get(priv, _PLL2_R)));
+		printf("- DDR : %s MHz\n", strmhz(buf, gd->mem_clk));
 	}
 #endif /* CONFIG_DISPLAY_CPUINFO */
 #endif
