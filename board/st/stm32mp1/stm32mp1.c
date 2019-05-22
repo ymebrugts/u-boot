@@ -175,6 +175,7 @@ static __maybe_unused bool board_is_dk2(void)
 
 int board_late_init(void)
 {
+	char *boot_device;
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 	const void *fdt_compat;
 	int fdt_compat_len;
@@ -188,6 +189,10 @@ int board_late_init(void)
 			env_set("board_name", fdt_compat + 3);
 	}
 #endif
+	/* Check the boot-source to disable bootdelay */
+	boot_device = env_get("boot_device");
+	if (!strcmp(boot_device, "serial") || !strcmp(boot_device, "usb"))
+		env_set("bootdelay", "0");
 
 	return 0;
 }
