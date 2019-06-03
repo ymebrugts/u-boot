@@ -33,6 +33,10 @@
 	};
 };
 
+&adc {
+	status = "okay";
+};
+
 &clk_hse {
 	st,digbypass;
 };
