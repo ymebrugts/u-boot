@@ -12,8 +12,6 @@
 #include <asm/io.h>
 #include "stm32mp1_ddr.h"
 
-DECLARE_GLOBAL_DATA_PTR;
-
 static const char *const clkname[] = {
 	"ddrc1",
 	"ddrc2",
@@ -52,7 +50,7 @@ int stm32mp1_ddr_clk_enable(struct ddr_info *priv, uint32_t mem_speed)
 	if (ddr_clk > (mem_speed * 100)) {
 		pr_err("DDR expected freq %d kHz, current is %d kHz\n",
 		       mem_speed, (u32)(ddrphy_clk / 1000));
-		return -1;
+		return -EINVAL;
 	}
 	return 0;
 }
@@ -155,11 +153,6 @@ static int stm32mp1_ddr_probe(struct udevice *dev)
 
 	priv->ctl = regmap_get_range(map, 0);
 	priv->phy = regmap_get_range(map, 1);
-
-	map = syscon_get_regmap_by_driver_data(STM32MP_SYSCON_PWR);
-	if (IS_ERR(map))
-		return PTR_ERR(map);
-	priv->pwr = regmap_get_range(map, 0);
 
 	priv->rcc = STM32_RCC_BASE;
 

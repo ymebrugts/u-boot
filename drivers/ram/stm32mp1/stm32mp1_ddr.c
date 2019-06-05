@@ -192,6 +192,7 @@ static const struct reg_desc ddrphy_cal[DDRPHY_REG_CAL_SIZE] = {
 /**************************************************************
  * DYNAMIC REGISTERS: only used for debug purpose (read/modify)
  **************************************************************/
+#ifdef CONFIG_STM32MP1_DDR_INTERACTIVE
 static const struct reg_desc ddr_dyn[] = {
 	DDR_REG_DYN(stat),
 	DDR_REG_DYN(init0),
@@ -222,6 +223,8 @@ static const struct reg_desc ddrphy_dyn[] = {
 
 #define DDRPHY_REG_DYN_SIZE	ARRAY_SIZE(ddrphy_dyn)
 
+#endif
+
 /*****************************************************************
  * REGISTERS ARRAY: used to parse device tree and interactive mode
  *****************************************************************/
@@ -233,11 +236,13 @@ enum reg_type {
 	REGPHY_REG,
 	REGPHY_TIMING,
 	REGPHY_CAL,
+#ifdef CONFIG_STM32MP1_DDR_INTERACTIVE
 /* dynamic registers => managed in driver or not changed,
  * can be dumped in interactive mode
  */
 	REG_DYN,
 	REGPHY_DYN,
+#endif
 	REG_TYPE_NB
 };
 
@@ -271,10 +276,12 @@ const struct ddr_reg_info ddr_registers[REG_TYPE_NB] = {
 	"timing", ddrphy_timing, DDRPHY_REG_TIMING_SIZE, DDRPHY_BASE},
 [REGPHY_CAL] = {
 	"cal", ddrphy_cal, DDRPHY_REG_CAL_SIZE, DDRPHY_BASE},
+#ifdef CONFIG_STM32MP1_DDR_INTERACTIVE
 [REG_DYN] = {
 	"dyn", ddr_dyn, DDR_REG_DYN_SIZE, DDR_BASE},
 [REGPHY_DYN] = {
 	"dyn", ddrphy_dyn, DDRPHY_REG_DYN_SIZE, DDRPHY_BASE},
+#endif
 };
 
 const char *base_name[] = {
@@ -313,37 +320,6 @@ static void set_reg(const struct ddr_info *priv,
 			      (u32)ptr, desc[i].name, value);
 		}
 	}
-}
-
-static void ddrphy_idone_wait(struct stm32mp1_ddrphy *phy)
-{
-	u32 pgsr;
-	int ret;
-
-	ret = readl_poll_timeout(&phy->pgsr, pgsr,
-				 pgsr & (DDRPHYC_PGSR_IDONE |
-					 DDRPHYC_PGSR_DTERR |
-					 DDRPHYC_PGSR_DTIERR |
-					 DDRPHYC_PGSR_DFTERR |
-					 DDRPHYC_PGSR_RVERR |
-					 DDRPHYC_PGSR_RVEIRR),
-				1000000);
-	debug("\n[0x%08x] pgsr = 0x%08x ret=%d\n",
-	      (u32)&phy->pgsr, pgsr, ret);
-}
-
-void stm32mp1_ddrphy_init(struct stm32mp1_ddrphy *phy, u32 pir)
-{
-	pir |= DDRPHYC_PIR_INIT;
-	writel(pir, &phy->pir);
-	debug("[0x%08x] pir = 0x%08x -> 0x%08x\n",
-	      (u32)&phy->pir, pir, readl(&phy->pir));
-
-	/* need to wait 10 configuration clock before start polling */
-	udelay(10);
-
-	/* Wait DRAM initialization and Gate Training Evaluation complete */
-	ddrphy_idone_wait(phy);
 }
 
 #ifdef CONFIG_STM32MP1_DDR_INTERACTIVE
@@ -444,7 +420,7 @@ void stm32mp1_edit_reg(const struct ddr_info *priv,
 		printf("%s not found\n", name);
 		return;
 	}
-	if (strict_strtoul(string, 16, &value) <  0) {
+	if (strict_strtoul(string, 16, &value) < 0) {
 		printf("invalid value %s\n", string);
 		return;
 	}
@@ -812,6 +788,37 @@ static void ddr3_dll_off(struct ddr_info *priv)
 	      (u32)&priv->ctl->dbg1, readl(&priv->ctl->dbg1));
 
 	debug("%s: exit\n", __func__);
+}
+
+static void ddrphy_idone_wait(struct stm32mp1_ddrphy *phy)
+{
+	u32 pgsr;
+	int ret;
+
+	ret = readl_poll_timeout(&phy->pgsr, pgsr,
+				 pgsr & (DDRPHYC_PGSR_IDONE |
+					 DDRPHYC_PGSR_DTERR |
+					 DDRPHYC_PGSR_DTIERR |
+					 DDRPHYC_PGSR_DFTERR |
+					 DDRPHYC_PGSR_RVERR |
+					 DDRPHYC_PGSR_RVEIRR),
+				1000000);
+	debug("\n[0x%08x] pgsr = 0x%08x ret=%d\n",
+	      (u32)&phy->pgsr, pgsr, ret);
+}
+
+void stm32mp1_ddrphy_init(struct stm32mp1_ddrphy *phy, u32 pir)
+{
+	pir |= DDRPHYC_PIR_INIT;
+	writel(pir, &phy->pir);
+	debug("[0x%08x] pir = 0x%08x -> 0x%08x\n",
+	      (u32)&phy->pir, pir, readl(&phy->pir));
+
+	/* need to wait 10 configuration clock before start polling */
+	udelay(10);
+
+	/* Wait DRAM initialization and Gate Training Evaluation complete */
+	ddrphy_idone_wait(phy);
 }
 
 void stm32mp1_refresh_disable(struct stm32mp1_ddrctl *ctl)
