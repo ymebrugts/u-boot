@@ -134,7 +134,10 @@ int __secure psci_cpu_on(u32 function_id, u32 target_cpu, u32 pc,
 	if (readl(TAMP_BACKUP_MAGIC_NUMBER))
 		writel(0xFFFFFFFF, TAMP_BACKUP_MAGIC_NUMBER);
 
-	/* ROM code need a SGI0 after core reset is ready when magic = 0 */
+	/*
+	 * ROM code need a first SGI0 after core reset
+	 * core is ready when magic is set to 0 in ROM code
+	 */
 	while (readl(TAMP_BACKUP_MAGIC_NUMBER))
 		stm32mp_raise_sgi0(cpu);
 

@@ -14,9 +14,9 @@ else
 obj-$(CONFIG_CMD_STM32PROG) += cmd_stm32prog/
 obj-$(CONFIG_CMD_STM32KEY) += cmd_stm32key.o
 
-obj-$(CONFIG_ARMV7_PSCI) += psci.o
 obj-y += bsec.o
-obj-y += cmd_poweroff.o
+obj-$(CONFIG_SYSRESET) += cmd_poweroff.o
+obj-$(CONFIG_ARMV7_PSCI) += psci.o
 endif
 
 obj-$(CONFIG_$(SPL_)DM_REGULATOR) += pwr_regulator.o

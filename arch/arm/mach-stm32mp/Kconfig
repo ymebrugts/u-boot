@@ -43,12 +43,12 @@ config TARGET_STM32MP1
 	imply SYSRESET_SYSCON if !STM32MP1_TRUSTED
 	help
 		target STMicroelectronics SOC STM32MP1 family
-		STM32MP153 or STM32MP151
+		STM32MP157, STM32MP153 or STM32MP151
 		STMicroelectronics MPU with core ARMv7
-		dual core A7 for STM32MP153, monocore for STM32MP151
+		dual core A7 for STM32MP157/3, monocore for STM32MP151
 
 config STM32MP1_RESET_HALT_WORKAROUND
-	bool "workaround for reset halt deubg on stm32mp15x"
+	bool "workaround for reset halt debug on stm32mp15x"
 	depends on TARGET_STM32MP1
 	default y
 	help
@@ -58,7 +58,6 @@ config STM32MP1_RESET_HALT_WORKAROUND
 		the debugger to attach
 		it can be removed when using the Soc revision
 		that fixes the limitation.
-
 
 config STM32MP1_TRUSTED
 	bool "Support trusted boot with TF-A"
@@ -135,7 +134,6 @@ config NR_DRAM_BANKS
 
 config BOOTSTAGE_STASH_ADDR
 	default 0xC3000000
-
 
 if BOOTCOUNT_LIMIT
 config SYS_BOOTCOUNT_SINGLEWORD
