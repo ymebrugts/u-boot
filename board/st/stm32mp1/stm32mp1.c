@@ -165,52 +165,6 @@ static void board_key_check(void)
 #endif
 }
 
-static __maybe_unused bool board_is_dk2(void)
-{
-	if (of_machine_is_compatible("st,stm32mp157c-dk2"))
-		return true;
-
-	return false;
-}
-
-int board_late_init(void)
-{
-	char *boot_device;
-#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	const void *fdt_compat;
-	int fdt_compat_len;
-
-	fdt_compat = fdt_getprop(gd->fdt_blob, 0, "compatible",
-				 &fdt_compat_len);
-	if (fdt_compat && fdt_compat_len) {
-		if (strncmp(fdt_compat, "st,", 3) != 0)
-			env_set("board_name", fdt_compat);
-		else
-			env_set("board_name", fdt_compat + 3);
-	}
-#endif
-	/* Check the boot-source to disable bootdelay */
-	boot_device = env_get("boot_device");
-	if (!strcmp(boot_device, "serial") || !strcmp(boot_device, "usb"))
-		env_set("bootdelay", "0");
-
-	return 0;
-}
-
-#ifdef CONFIG_STM32_SDMMC2
-/* this is a weak define that we are overriding */
-static int board_mmc_init(void)
-{
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_STM32_QSPI
-static void board_qspi_init(void)
-{
-}
-#endif /* CONFIG_STM32_QSPI */
-
 #if defined(CONFIG_USB_GADGET) && defined(CONFIG_USB_GADGET_DWC2_OTG)
 
 /*
@@ -442,113 +396,6 @@ int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
 	return 0;
 }
 #endif /* CONFIG_USB_GADGET */
-
-static void sysconf_init(void)
-{
-#ifndef CONFIG_STM32MP1_TRUSTED
-	u8 *syscfg;
-#ifdef CONFIG_DM_REGULATOR
-	struct udevice *pwr_dev;
-	struct udevice *pwr_reg;
-	struct udevice *dev;
-	int ret;
-	u32 otp = 0;
-#endif
-	u32 bootr;
-
-	syscfg = (u8 *)syscon_get_first_range(STM32MP_SYSCON_SYSCFG);
-	debug("SYSCFG: init @0x%p\n", syscfg);
-
-	/* interconnect update : select master using the port 1 */
-	/* LTDC = AXI_M9 */
-	/* GPU  = AXI_M8 */
-	/* today information is hardcoded in U-Boot */
-	writel(BIT(9), syscfg + SYSCFG_ICNR);
-	debug("[0x%x] SYSCFG.icnr = 0x%08x (LTDC and GPU)\n",
-	      (u32)syscfg + SYSCFG_ICNR, readl(syscfg + SYSCFG_ICNR));
-
-	/* disable Pull-Down for boot pin connected to VDD */
-	bootr = readl(syscfg + SYSCFG_BOOTR);
-	bootr &= ~(SYSCFG_BOOTR_BOOT_MASK << SYSCFG_BOOTR_BOOTPD_SHIFT);
-	bootr |= (bootr & SYSCFG_BOOTR_BOOT_MASK) << SYSCFG_BOOTR_BOOTPD_SHIFT;
-	writel(bootr, syscfg + SYSCFG_BOOTR);
-	debug("[0x%x] SYSCFG.bootr = 0x%08x\n",
-	      (u32)syscfg + SYSCFG_BOOTR, readl(syscfg + SYSCFG_BOOTR));
-
-#ifdef CONFIG_DM_REGULATOR
-	/* High Speed Low Voltage Pad mode Enable for SPI, SDMMC, ETH, QSPI
-	 * and TRACE. Needed above ~50MHz and conditioned by AFMUX selection.
-	 * The customer will have to disable this for low frequencies
-	 * or if AFMUX is selected but the function not used, typically for
-	 * TRACE. Otherwise, impact on power consumption.
-	 *
-	 * WARNING:
-	 *   enabling High Speed mode while VDD>2.7V
-	 *   with the OTP product_below_2v5 (OTP 18, BIT 13)
-	 *   erroneously set to 1 can damage the IC!
-	 *   => U-Boot set the register only if VDD < 2.7V (in DT)
-	 *      but this value need to be consistent with board design
-	 */
-	ret = syscon_get_by_driver_data(STM32MP_SYSCON_PWR, &pwr_dev);
-	if (!ret) {
-
-		ret = uclass_get_device_by_driver(UCLASS_MISC,
-						  DM_GET_DRIVER(stm32mp_bsec),
-						  &dev);
-		if (ret) {
-			pr_err("Can't find stm32mp_bsec driver\n");
-			return;
-		}
-
-		ret = misc_read(dev, STM32_BSEC_SHADOW(18), &otp, 4);
-		if (!ret)
-			otp = otp & BIT(13);
-
-		ret = uclass_get_device_by_driver(UCLASS_PMIC,
-						  DM_GET_DRIVER(stm32mp_pwr_pmic),
-						  &dev);
-
-		/* get VDD = vdd-supply */
-		ret = device_get_supply_regulator(dev, "vdd-supply", &pwr_reg);
-
-		/* check if VDD is Low Voltage */
-		if (!ret) {
-			if (regulator_get_value(pwr_reg) < 2700000) {
-				writel(SYSCFG_IOCTRLSETR_HSLVEN_TRACE |
-				       SYSCFG_IOCTRLSETR_HSLVEN_QUADSPI |
-				       SYSCFG_IOCTRLSETR_HSLVEN_ETH |
-				       SYSCFG_IOCTRLSETR_HSLVEN_SDMMC |
-				       SYSCFG_IOCTRLSETR_HSLVEN_SPI,
-				       syscfg + SYSCFG_IOCTRLSETR);
-
-				if (!otp)
-					pr_err("product_below_2v5=0: HSLVEN protected by HW\n");
-			} else {
-				if (otp)
-					pr_err("product_below_2v5=1: HSLVEN update is destructive, no update as VDD>2.7V\n");
-			}
-		} else {
-			debug("VDD unknown");
-		}
-	}
-#endif
-	debug("[0x%x] SYSCFG.IOCTRLSETR = 0x%08x\n",
-	      (u32)syscfg + SYSCFG_IOCTRLSETR,
-	      readl(syscfg + SYSCFG_IOCTRLSETR));
-
-	/* activate automatic I/O compensation
-	 * warning: need to ensure CSI enabled and ready in clock driver
-	 */
-	writel(SYSCFG_CMPENSETR_MPU_EN, syscfg + SYSCFG_CMPENSETR);
-
-	while (!(readl(syscfg + SYSCFG_CMPCR) & SYSCFG_CMPCR_READY))
-		;
-	clrbits_le32(syscfg + SYSCFG_CMPCR, SYSCFG_CMPCR_SW_CTRL);
-
-	debug("[0x%x] SYSCFG.cmpcr = 0x%08x\n",
-	      (u32)syscfg + SYSCFG_CMPCR, readl(syscfg + SYSCFG_CMPCR));
-#endif
-}
 
 /* board interface eth init */
 /* this is a weak define that we are overriding */
@@ -812,6 +659,112 @@ static int board_check_usb_power(void)
 }
 #endif /* CONFIG_ADC */
 
+static void sysconf_init(void)
+{
+#ifndef CONFIG_STM32MP1_TRUSTED
+	u8 *syscfg;
+#ifdef CONFIG_DM_REGULATOR
+	struct udevice *pwr_dev;
+	struct udevice *pwr_reg;
+	struct udevice *dev;
+	int ret;
+	u32 otp = 0;
+#endif
+	u32 bootr;
+
+	syscfg = (u8 *)syscon_get_first_range(STM32MP_SYSCON_SYSCFG);
+	debug("SYSCFG: init @0x%p\n", syscfg);
+
+	/* interconnect update : select master using the port 1 */
+	/* LTDC = AXI_M9 */
+	/* GPU  = AXI_M8 */
+	/* today information is hardcoded in U-Boot */
+	writel(BIT(9), syscfg + SYSCFG_ICNR);
+	debug("[0x%x] SYSCFG.icnr = 0x%08x (LTDC and GPU)\n",
+	      (u32)syscfg + SYSCFG_ICNR, readl(syscfg + SYSCFG_ICNR));
+
+	/* disable Pull-Down for boot pin connected to VDD */
+	bootr = readl(syscfg + SYSCFG_BOOTR);
+	bootr &= ~(SYSCFG_BOOTR_BOOT_MASK << SYSCFG_BOOTR_BOOTPD_SHIFT);
+	bootr |= (bootr & SYSCFG_BOOTR_BOOT_MASK) << SYSCFG_BOOTR_BOOTPD_SHIFT;
+	writel(bootr, syscfg + SYSCFG_BOOTR);
+	debug("[0x%x] SYSCFG.bootr = 0x%08x\n",
+	      (u32)syscfg + SYSCFG_BOOTR, readl(syscfg + SYSCFG_BOOTR));
+
+#ifdef CONFIG_DM_REGULATOR
+	/* High Speed Low Voltage Pad mode Enable for SPI, SDMMC, ETH, QSPI
+	 * and TRACE. Needed above ~50MHz and conditioned by AFMUX selection.
+	 * The customer will have to disable this for low frequencies
+	 * or if AFMUX is selected but the function not used, typically for
+	 * TRACE. Otherwise, impact on power consumption.
+	 *
+	 * WARNING:
+	 *   enabling High Speed mode while VDD>2.7V
+	 *   with the OTP product_below_2v5 (OTP 18, BIT 13)
+	 *   erroneously set to 1 can damage the IC!
+	 *   => U-Boot set the register only if VDD < 2.7V (in DT)
+	 *      but this value need to be consistent with board design
+	 */
+	ret = syscon_get_by_driver_data(STM32MP_SYSCON_PWR, &pwr_dev);
+	if (!ret) {
+		ret = uclass_get_device_by_driver(UCLASS_MISC,
+						  DM_GET_DRIVER(stm32mp_bsec),
+						  &dev);
+		if (ret) {
+			pr_err("Can't find stm32mp_bsec driver\n");
+			return;
+		}
+
+		ret = misc_read(dev, STM32_BSEC_SHADOW(18), &otp, 4);
+		if (!ret)
+			otp = otp & BIT(13);
+
+		ret = uclass_get_device_by_driver(UCLASS_PMIC,
+						  DM_GET_DRIVER(stm32mp_pwr_pmic),
+						  &dev);
+
+		/* get VDD = vdd-supply */
+		ret = device_get_supply_regulator(dev, "vdd-supply", &pwr_reg);
+
+		/* check if VDD is Low Voltage */
+		if (!ret) {
+			if (regulator_get_value(pwr_reg) < 2700000) {
+				writel(SYSCFG_IOCTRLSETR_HSLVEN_TRACE |
+				       SYSCFG_IOCTRLSETR_HSLVEN_QUADSPI |
+				       SYSCFG_IOCTRLSETR_HSLVEN_ETH |
+				       SYSCFG_IOCTRLSETR_HSLVEN_SDMMC |
+				       SYSCFG_IOCTRLSETR_HSLVEN_SPI,
+				       syscfg + SYSCFG_IOCTRLSETR);
+
+				if (!otp)
+					pr_err("product_below_2v5=0: HSLVEN protected by HW\n");
+			} else {
+				if (otp)
+					pr_err("product_below_2v5=1: HSLVEN update is destructive, no update as VDD>2.7V\n");
+			}
+		} else {
+			debug("VDD unknown");
+		}
+	}
+#endif
+	debug("[0x%x] SYSCFG.IOCTRLSETR = 0x%08x\n",
+	      (u32)syscfg + SYSCFG_IOCTRLSETR,
+	      readl(syscfg + SYSCFG_IOCTRLSETR));
+
+	/* activate automatic I/O compensation
+	 * warning: need to ensure CSI enabled and ready in clock driver
+	 */
+	writel(SYSCFG_CMPENSETR_MPU_EN, syscfg + SYSCFG_CMPENSETR);
+
+	while (!(readl(syscfg + SYSCFG_CMPCR) & SYSCFG_CMPCR_READY))
+		;
+	clrbits_le32(syscfg + SYSCFG_CMPCR, SYSCFG_CMPCR_SW_CTRL);
+
+	debug("[0x%x] SYSCFG.cmpcr = 0x%08x\n",
+	      (u32)syscfg + SYSCFG_CMPCR, readl(syscfg + SYSCFG_CMPCR));
+#endif
+}
+
 #ifdef CONFIG_DM_REGULATOR
 /* Fix to make I2C1 usable on DK2 for touchscreen usage in kernel */
 static int dk2_i2c1_fix(void)
@@ -919,6 +872,14 @@ const char *env_ext4_get_dev_part(void)
 }
 #endif
 
+static __maybe_unused bool board_is_dk2(void)
+{
+	if (of_machine_is_compatible("st,stm32mp157c-dk2"))
+		return true;
+
+	return false;
+}
+
 /* board dependent setup after realloc */
 int board_init(void)
 {
@@ -952,17 +913,35 @@ int board_init(void)
 
 	sysconf_init();
 
-#ifdef CONFIG_STM32_SDMMC2
-	board_mmc_init();
-#endif /* CONFIG_STM32_SDMMC2 */
-
-#ifdef CONFIG_STM32_QSPI
-	board_qspi_init();
-#endif /* CONFIG_STM32_QSPI */
-
 #if defined(CONFIG_USB_GADGET) && defined(CONFIG_USB_GADGET_DWC2_OTG)
 	board_usbotg_init();
 #endif
+
+	return 0;
+}
+
+int board_late_init(void)
+{
+
+	char *boot_device;
+#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+	const void *fdt_compat;
+	int fdt_compat_len;
+
+	fdt_compat = fdt_getprop(gd->fdt_blob, 0, "compatible",
+				 &fdt_compat_len);
+	if (fdt_compat && fdt_compat_len) {
+		if (strncmp(fdt_compat, "st,", 3) != 0)
+			env_set("board_name", fdt_compat);
+		else
+			env_set("board_name", fdt_compat + 3);
+	}
+#endif
+
+	/* Check the boot-source to disable bootdelay */
+	boot_device = env_get("boot_device");
+	if (!strcmp(boot_device, "serial") || !strcmp(boot_device, "usb"))
+		env_set("bootdelay", "0");
 
 	return 0;
 }

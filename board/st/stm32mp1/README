@@ -176,7 +176,6 @@ You can select the boot mode,
  -----------------------------------
   Reserved	0	0	0
   NOR		0	0	1
-  SD-Card	1	1	1
   SD-Card	1	0	1
   eMMC		0	1	0
   NAND		0	1	1
@@ -209,14 +208,14 @@ The minimal requirements for STMP32MP1 boot up to U-Boot are:
 - one ssbl partition for U-Boot
 
 Then the minimal GPT partition is:
-   ----- ------- --------- ---------------
-  | Num | Name  | Size    |  Content     |
-   ----- ------- -------- ----------------
-  |  1  | fsbl1 | 256 KiB |  TF-A or SPL |
-  |  2  | fsbl2 | 256 KiB |  TF-A or SPL |
-  |  3  | ssbl  | enought |  U-Boot      |
-  |  *  |  -    |  -      |  Boot/Rootfs |
-   ----- ------- --------- ---------------
+    ----- ------- --------- --------------
+   | Num | Name  | Size    |  Content     |
+    ----- ------- --------- --------------
+   |  1  | fsbl1 | 256 KiB |  TF-A or SPL |
+   |  2  | fsbl2 | 256 KiB |  TF-A or SPL |
+   |  3  | ssbl  | enought |  U-Boot      |
+   |  *  |  -    |  -      |  Boot/Rootfs |
+    ----- ------- --------- --------------
 
 (*) add bootable partition for extlinux.conf
     following Generic Distribution
@@ -240,7 +239,7 @@ for example: with gpt table with 128 entries
 
 	you can add other partitions for kernel
 	one partition rootfs for example:
-		-n 3:5154:		-c 4:rootfs \
+		-n 4:5154:		-c 4:rootfs \
 
   c) copy the FSBL (2 times) and SSBL file on the correct partition.
      in this example in partition 1 to 3
@@ -255,7 +254,7 @@ for example: with gpt table with 128 entries
 	# dd if=tf-a.stm32 of=/dev/mmcblk0p2
 	# dd if=u-boot.stm32 of=/dev/mmcblk0p3
 
-To boot from SDCard, select BootPinMode = 1 1 1 and reset.
+To boot from SDCard, select BootPinMode = 1 0 1 and reset.
 
 8. Prepare eMMC
 ===============
@@ -264,7 +263,7 @@ You can use U-Boot to copy binary in eMMC.
 In the next example, you need to boot from SDCARD and the images (u-boot-spl.stm32, u-boot.img)
 are presents on SDCARD (mmc 0) in ext4 partition 4 (bootfs).
 
-To boot from SDCard, select BootPinMode = 1 1 1 and reset.
+To boot from SDCard, select BootPinMode = 1 0 1 and reset.
 
 Then you update the eMMC with the next U-Boot command :
 
