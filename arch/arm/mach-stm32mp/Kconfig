@@ -39,6 +39,7 @@ config TARGET_STM32MP1
 	select STM32_RESET
 	select STM32_SERIAL
 	imply BOOTCOUNT_LIMIT
+	imply PRE_CONSOLE_BUFFER
 	imply SILENT_CONSOLE
 	imply SYSRESET_PSCI if STM32MP1_TRUSTED
 	imply SYSRESET_SYSCON if !STM32MP1_TRUSTED
@@ -129,6 +130,12 @@ config SYS_TEXT_BASE
 		configure the U-Boot base address
 		when DDR driver is used:
 		  DDR + 1MB (0xC0100000)
+
+config PRE_CON_BUF_ADDR
+	default 0xC02FF000
+
+config PRE_CON_BUF_SZ
+	default 4096
 
 config NR_DRAM_BANKS
 	default 1
