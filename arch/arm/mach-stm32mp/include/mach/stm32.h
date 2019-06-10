@@ -125,9 +125,5 @@ enum forced_boot_mode {
 
 #define BSEC_OTP_BOARD	59
 
-#if CONFIG_STM32_ETZPC
-int stm32_fdt_fixup_etzpc(void *fdt);
-#endif
-
 #endif /* __ASSEMBLY__*/
 #endif /* _MACH_STM32_H_ */

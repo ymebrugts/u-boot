@@ -16,7 +16,6 @@
 #include <dm/lists.h>
 #include <dm/uclass.h>
 #include <dt-bindings/clock/stm32mp1-clks.h>
-#include <dt-bindings/pinctrl/stm32-pinfunc.h>
 
 /* RCC register */
 #define RCC_TZCR		(STM32_RCC_BASE + 0x00)
@@ -83,11 +82,6 @@
  */
 #define PKG_SHIFT	27
 #define PKG_MASK	GENMASK(2, 0)
-
-#define PKG_AA_LBGA448	4
-#define PKG_AB_LBGA354	3
-#define PKG_AC_TFBGA361	2
-#define PKG_AD_TFBGA257	1
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -285,7 +279,7 @@ u32 get_cpu_type(void)
 }
 
 /* Get Package options from OTP */
-static u32 get_cpu_package(void)
+u32 get_cpu_package(void)
 {
 	return get_otp(BSEC_OTP_PKG, PKG_SHIFT, PKG_MASK);
 }
@@ -589,46 +583,4 @@ int arch_misc_init(void)
 	setup_serial_number();
 
 	return 0;
-}
-
-/*
- * This function is called right before the kernel is booted. "blob" is the
- * device tree that will be passed to the kernel.
- */
-int ft_system_setup(void *blob, bd_t *bd)
-{
-	int ret = 0;
-	u32 pkg;
-
-#if CONFIG_STM32_ETZPC
-	ret = stm32_fdt_fixup_etzpc(blob);
-	if (ret)
-		return ret;
-#endif
-
-	switch (get_cpu_package()) {
-	case PKG_AA_LBGA448:
-		pkg = STM32MP157CAA;
-		break;
-	case PKG_AB_LBGA354:
-		pkg = STM32MP157CAB;
-		break;
-	case PKG_AC_TFBGA361:
-		pkg = STM32MP157CAC;
-		break;
-	case PKG_AD_TFBGA257:
-		pkg = STM32MP157CAD;
-		break;
-	default:
-		pkg = 0;
-		break;
-	}
-	if (pkg) {
-		do_fixup_by_compat_u32(blob, "st,stm32mp157-pinctrl",
-				       "st,package", pkg, false);
-		do_fixup_by_compat_u32(blob, "st,stm32mp157-z-pinctrl",
-				       "st,package", pkg, false);
-	}
-
-	return ret;
 }

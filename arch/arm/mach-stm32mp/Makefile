@@ -20,4 +20,4 @@ obj-$(CONFIG_ARMV7_PSCI) += psci.o
 endif
 
 obj-$(CONFIG_$(SPL_)DM_REGULATOR) += pwr_regulator.o
-obj-$(CONFIG_STM32_ETZPC) += stm32-etzpc.o
+obj-$(CONFIG_OF_SYSTEM_SETUP) += fdt.o
