@@ -462,11 +462,8 @@ static int setup_mac_address(void)
 	int i;
 	u32 otp[2];
 	uchar enetaddr[6];
+	char buf[ARP_HLEN_ASCII + 1];
 	struct udevice *dev;
-
-	/* MAC already in environment */
-	if (eth_env_get_enetaddr("ethaddr", enetaddr))
-		return 0;
 
 	ret = uclass_get_device_by_driver(UCLASS_MISC,
 					  DM_GET_DRIVER(stm32mp_bsec),
@@ -486,9 +483,11 @@ static int setup_mac_address(void)
 		pr_err("invalid MAC address in OTP %pM", enetaddr);
 		return -EINVAL;
 	}
+
 	pr_debug("OTP MAC address = %pM\n", enetaddr);
-	ret = !eth_env_set_enetaddr("ethaddr", enetaddr);
-	if (!ret)
+	sprintf(buf, "%pM", enetaddr);
+	ret = env_set("ethaddr", buf);
+	if (ret)
 		pr_err("Failed to set mac address %pM from OTP: %d\n",
 		       enetaddr, ret);
 #endif
@@ -502,9 +501,6 @@ static int setup_serial_number(void)
 	u32 otp[3] = {0, 0, 0 };
 	struct udevice *dev;
 	int ret;
-
-	if (env_get("serial#"))
-		return 0;
 
 	ret = uclass_get_device_by_driver(UCLASS_MISC,
 					  DM_GET_DRIVER(stm32mp_bsec),
