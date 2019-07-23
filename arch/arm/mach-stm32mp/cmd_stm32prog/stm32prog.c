@@ -63,7 +63,7 @@ static const efi_guid_t uuid_mmc[3] = {
 };
 
 DECLARE_GLOBAL_DATA_PTR;
-#define ENV_BUF_LEN			SZ_1K
+#define ALT_BUF_LEN			SZ_1K
 
 /* order of column in flash layout file */
 enum stm32prog_col_t {
@@ -964,7 +964,7 @@ static int stm32prog_alt_add(struct stm32prog_data *data,
 	int offset = 0;
 	char devstr[4];
 	char dfustr[10];
-	char buf[ENV_BUF_LEN];
+	char buf[ALT_BUF_LEN];
 	u32 size;
 	char multiplier,  type;
 
@@ -985,7 +985,7 @@ static int stm32prog_alt_add(struct stm32prog_data *data,
 		type = 'a';/*Readable*/
 
 	memset(buf, 0, sizeof(buf));
-	offset = snprintf(buf, ENV_BUF_LEN - offset,
+	offset = snprintf(buf, ALT_BUF_LEN - offset,
 			  "@%s/0x%02x/1*%d%c%c ",
 			  part->name, part->id,
 			  size, multiplier, type);
@@ -997,29 +997,29 @@ static int stm32prog_alt_add(struct stm32prog_data *data,
 			dfu_size = part->size / part->dev->lba_blk_size;
 		else
 			dfu_size = part->size;
-		offset += snprintf(buf + offset, ENV_BUF_LEN - offset,
+		offset += snprintf(buf + offset, ALT_BUF_LEN - offset,
 				   "raw 0x0 0x%llx", dfu_size);
 	} else if (part->part_id < 0) {
 		u64 nb_blk = part->size / part->dev->lba_blk_size;
 
 		/* lba_blk_size, mmc->read_bl_len */
-		offset += snprintf(buf + offset, ENV_BUF_LEN - offset,
+		offset += snprintf(buf + offset, ALT_BUF_LEN - offset,
 				   "raw 0x%llx 0x%llx",
 				   part->addr, nb_blk);
-		offset += snprintf(buf + offset, ENV_BUF_LEN - offset,
+		offset += snprintf(buf + offset, ALT_BUF_LEN - offset,
 				   " mmcpart %d;", -(part->part_id));
 	} else {
 		if (part->part_type == PART_SYSTEM &&
 		    (part->dev_type == DFU_DEV_NAND ||
 		     part->dev_type == DFU_DEV_SF))
 			offset += snprintf(buf + offset,
-					   ENV_BUF_LEN - offset,
+					   ALT_BUF_LEN - offset,
 					   "partubi");
 		else
 			offset += snprintf(buf + offset,
-					   ENV_BUF_LEN - offset,
+					   ALT_BUF_LEN - offset,
 					   "part");
-		offset += snprintf(buf + offset, ENV_BUF_LEN - offset,
+		offset += snprintf(buf + offset, ALT_BUF_LEN - offset,
 				   " %d %d;",
 				   part->dev_id,
 				   part->part_id);
@@ -1053,7 +1053,7 @@ static int stm32prog_alt_add_virt(struct dfu_entity *dfu,
 {
 	int ret = 0;
 	char devstr[4];
-	char buf[ENV_BUF_LEN];
+	char buf[ALT_BUF_LEN];
 
 	sprintf(devstr, "%d", phase);
 	sprintf(buf, "@%s/0x%02x/1*%dBe", name, phase, size);
@@ -1112,7 +1112,7 @@ static int dfu_init_entities(struct stm32prog_data *data)
 			ret = stm32prog_alt_add(data, dfu, part);
 		}
 	} else {
-		char buf[ENV_BUF_LEN];
+		char buf[ALT_BUF_LEN];
 
 		sprintf(buf, "@FlashLayout/0x%02x/1*256Ke ram %x 40000",
 			PHASE_FLASHLAYOUT, STM32_DDR_BASE);
