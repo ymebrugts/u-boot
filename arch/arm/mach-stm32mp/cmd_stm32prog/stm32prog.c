@@ -842,14 +842,18 @@ static int treat_partition_list(struct stm32prog_data *data)
 static int create_partitions(struct stm32prog_data *data)
 {
 	int offset = 0;
-	char cmdbuf[32];
-	char buf[ENV_BUF_LEN];
+	const int buflen = SZ_8K;
+	char *buf;
 	char uuid[UUID_STR_LEN + 1];
 	unsigned char *uuid_bin;
 	unsigned int mmc_id;
 	int i;
 	bool rootfs_found;
 	struct stm32prog_part_t *part;
+
+	buf = malloc(buflen);
+	if (!buf)
+		return -ENOMEM;
 
 	puts("partitions : ");
 	/* initialize the selected device */
@@ -860,7 +864,7 @@ static int create_partitions(struct stm32prog_data *data)
 
 		offset = 0;
 		rootfs_found = false;
-		memset(buf, 0, sizeof(buf));
+		memset(buf, 0, buflen);
 
 		list_for_each_entry(part, &data->dev[i].part_list, list) {
 			/* skip eMMC boot partitions */
@@ -871,7 +875,17 @@ static int create_partitions(struct stm32prog_data *data)
 			if (part->part_type == RAW_IMAGE)
 				continue;
 
-			offset += snprintf(buf + offset, ENV_BUF_LEN - offset,
+			if (offset + 100 > buflen) {
+				pr_debug("\n%s: buffer too small, %s skippped",
+					 __func__, part->name);
+				continue;
+			}
+
+			if (!offset)
+				offset += sprintf(buf, "gpt write mmc %d \"",
+						  data->dev[i].dev_id);
+
+			offset += snprintf(buf + offset, buflen - offset,
 					   "name=%s,start=0x%llx,size=0x%llx",
 					   part->name,
 					   part->addr,
@@ -879,17 +893,17 @@ static int create_partitions(struct stm32prog_data *data)
 
 			if (part->part_type == PART_BINARY)
 				offset += snprintf(buf + offset,
-						   ENV_BUF_LEN - offset,
+						   buflen - offset,
 						   ",type="
 						   LINUX_RESERVED_UUID);
 			else
 				offset += snprintf(buf + offset,
-						   ENV_BUF_LEN - offset,
+						   buflen - offset,
 						   ",type=linux");
 
 			if (part->part_type == PART_SYSTEM)
 				offset += snprintf(buf + offset,
-						   ENV_BUF_LEN - offset,
+						   buflen - offset,
 						   ",bootable");
 
 			if (!rootfs_found && !strcmp(part->name, "rootfs")) {
@@ -901,23 +915,21 @@ static int create_partitions(struct stm32prog_data *data)
 					uuid_bin_to_str(uuid_bin, uuid,
 							UUID_STR_FORMAT_GUID);
 					offset += snprintf(buf + offset,
-							   ENV_BUF_LEN - offset,
+							   buflen - offset,
 							   ",uuid=%s", uuid);
 				}
 			}
 
-			offset += snprintf(buf + offset,
-					   ENV_BUF_LEN - offset,
-					   ";");
+			offset += snprintf(buf + offset, buflen - offset, ";");
 		}
 
 		if (offset) {
-			sprintf(cmdbuf, "gpt write mmc %d \"%s\"",
-				data->dev[i].dev_id, buf);
-			pr_debug("cmd: %s\n", cmdbuf);
-			if (run_command(cmdbuf, 0)) {
-				stm32prog_err("partitionning fail : %s",
-					      cmdbuf);
+			offset += snprintf(buf + offset, buflen - offset, "\"");
+			pr_debug("\ncmd: %s\n", buf);
+			if (run_command(buf, 0)) {
+				stm32prog_err("partitionning fail : %s", buf);
+				free(buf);
+
 				return -1;
 			}
 		}
@@ -926,21 +938,21 @@ static int create_partitions(struct stm32prog_data *data)
 			part_init(data->dev[i].block_dev);
 
 #ifdef DEBUG
-		sprintf(cmdbuf, "gpt verify mmc %d",
-			data->dev[i].dev_id);
-		pr_debug("cmd: %s ", cmdbuf);
-		if (run_command(cmdbuf, 0))
+		sprintf(buf, "gpt verify mmc %d", data->dev[i].dev_id);
+		pr_debug("\ncmd: %s", buf);
+		if (run_command(buf, 0))
 			printf("fail !\n");
 		else
 			printf("OK\n");
 
 		/* TEMP : for debug, display partition */
-		sprintf(cmdbuf, "part list mmc %d",
-			data->dev[i].dev_id);
-		run_command(cmdbuf, 0);
+		sprintf(buf, "part list mmc %d", data->dev[i].dev_id);
+		run_command(buf, 0);
 #endif
 	}
 	puts("done\n");
+	free(buf);
+
 	return 0;
 }
 
