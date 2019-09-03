@@ -432,7 +432,7 @@ static int rproc_load_elf_image(struct udevice *dev, unsigned long addr,
 	}
 
 	/* Load each program header */
-	for (i = 0; i < ehdr->e_phnum; ++i) {
+	for (i = 0; i < ehdr->e_phnum; ++i, phdr++) {
 		void *dst = (void *)(uintptr_t)phdr->p_paddr;
 		void *src = (void *)addr + phdr->p_offset;
 
@@ -453,7 +453,6 @@ static int rproc_load_elf_image(struct udevice *dev, unsigned long addr,
 			    roundup((unsigned long)dst + phdr->p_filesz,
 				    ARCH_DMA_MINALIGN) -
 			    rounddown((unsigned long)dst, ARCH_DMA_MINALIGN));
-		++phdr;
 	}
 
 	*entry = ehdr->e_entry;
