@@ -388,10 +388,15 @@ int g_dnl_board_usb_cable_connected(void)
 }
 
 #define STM32MP1_G_DNL_DFU_PRODUCT_NUM 0xdf11
+#define STM32MP1_G_DNL_FASTBOOT_PRODUCT_NUM 0x0afb
+
 int g_dnl_bind_fixup(struct usb_device_descriptor *dev, const char *name)
 {
 	if (!strcmp(name, "usb_dnl_dfu"))
 		put_unaligned(STM32MP1_G_DNL_DFU_PRODUCT_NUM, &dev->idProduct);
+	else if (!strcmp(name, "usb_dnl_fastboot"))
+		put_unaligned(STM32MP1_G_DNL_FASTBOOT_PRODUCT_NUM,
+			      &dev->idProduct);
 	else
 		put_unaligned(CONFIG_USB_GADGET_PRODUCT_NUM, &dev->idProduct);
 
