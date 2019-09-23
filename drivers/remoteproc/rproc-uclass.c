@@ -244,6 +244,7 @@ UCLASS_DRIVER(rproc) = {
 	.flags = DM_UC_FLAG_SEQ_ALIAS,
 	.pre_probe = rproc_pre_probe,
 	.post_probe = rproc_post_probe,
+	.per_device_auto_alloc_size = sizeof(struct rproc_priv),
 	.per_device_platdata_auto_alloc_size =
 		sizeof(struct dm_rproc_uclass_pdata),
 };
@@ -624,6 +625,7 @@ int rproc_load_rsc_table(int id, ulong addr, ulong size, ulong *rsc_addr,
 {
 	struct udevice *dev = NULL;
 	const struct dm_rproc_ops *ops;
+	struct rproc_priv *priv;
 	int ret;
 
 	ret = uclass_get_device_by_seq(UCLASS_REMOTEPROC, id, &dev);
@@ -639,23 +641,27 @@ int rproc_load_rsc_table(int id, ulong addr, ulong size, ulong *rsc_addr,
 		return -EINVAL;
 	}
 
-	dev_dbg(dev, "Loocking for resource table from address 0x%08lX size of %lu bytes\n",
+	dev_dbg(dev, "Looking for resource table from address 0x%08lX size of %lu bytes\n",
 		addr, size);
 
-	if (!rproc_elf_sanity_check(dev, addr, size)) {
-		/* load elf image */
-		ret = rproc_elf_find_load_rsc_table(dev, addr, size, rsc_addr,
-						    rsc_size);
-		if (ret) {
-			dev_dbg(dev, "No resource table found\n");
-			return -ENODATA;
-		}
-		dev_dbg(dev, "Resource table at 0x%08lx, size 0x%x!\n",
-			*rsc_addr, *rsc_size);
-		return 0;
+	ret = rproc_elf_sanity_check(dev, addr, size);
+	if (ret)
+		return ret;
+
+	ret = rproc_elf_find_load_rsc_table(dev, addr, size, rsc_addr,
+					    rsc_size);
+	if (ret) {
+		dev_dbg(dev, "No resource table found\n");
+		return -ENODATA;
 	}
 
-	return -ENODATA;
+	priv = dev_get_uclass_priv(dev);
+	priv->rsc_table_addr = *rsc_addr;
+	priv->rsc_table_size = *rsc_size;
+	dev_dbg(dev, "Resource table at 0x%08lx, size 0x%x!\n",
+		priv->rsc_table_addr, priv->rsc_table_size);
+
+	return 0;
 };
 
 /*
