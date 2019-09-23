@@ -1085,9 +1085,7 @@ void board_mtdparts_default(const char **mtdids, const char **mtdparts)
 #if defined(CONFIG_OF_BOARD_SETUP)
 int ft_board_setup(void *blob, bd_t *bd)
 {
-	ulong copro_rsc_addr, copro_rsc_size;
 	int off;
-	char *s_copro = NULL;
 #ifdef CONFIG_FDT_FIXUP_PARTITIONS
 	struct node_info nodes[] = {
 		{ "st,stm32f469-qspi",		MTD_DEV_TYPE_NOR,  },
@@ -1099,20 +1097,11 @@ int ft_board_setup(void *blob, bd_t *bd)
 	/* Update DT if coprocessor started */
 	off = fdt_path_offset(blob, "/m4");
 	if (off > 0) {
-		s_copro = env_get("copro_state");
-		copro_rsc_addr  = env_get_hex("copro_rsc_addr", 0);
-		copro_rsc_size  = env_get_hex("copro_rsc_size", 0);
-
-		if (s_copro) {
+		if (env_get("copro_state")) {
 			fdt_setprop_empty(blob, off, "early-booted");
-			if (copro_rsc_addr)
-				fdt_setprop_u32(blob, off, "rsc-address",
-						copro_rsc_addr);
-			if (copro_rsc_size)
-				fdt_setprop_u32(blob, off, "rsc-size",
-						copro_rsc_size);
 		} else {
 			fdt_delprop(blob, off, "early-booted");
+			writel(0, TAMP_COPRO_RSC_TBL_ADDRESS);
 		}
 	}
 
@@ -1134,18 +1123,18 @@ static void board_stm32copro_image_process(ulong fw_image, size_t fw_size)
 		}
 
 	ret = rproc_load_rsc_table(id, fw_image, fw_size, &rsc_addr, &rsc_size);
-	if (!ret) {
-		env_set_hex("copro_rsc_addr", rsc_addr);
-		env_set_hex("copro_rsc_size", rsc_size);
-	}
+	if (ret && ret != -ENODATA)
+		return;
 
 	ret = rproc_load(id, fw_image, fw_size);
 	printf("Load Remote Processor %d with data@addr=0x%08lx %u bytes:%s\n",
 	       id, fw_image, fw_size, ret ? " Failed!" : " Success!");
 
 	if (!ret) {
-		rproc_start(id);
-		env_set("copro_state", "booted");
+		ret = rproc_start(id);
+		printf("Start firmware:%s\n", ret ? " Failed!" : " Success!");
+		if (!ret)
+			env_set("copro_state", "booted");
 	}
 }
 
