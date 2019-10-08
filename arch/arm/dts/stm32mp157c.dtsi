@@ -20,14 +20,36 @@
 			compatible = "arm,cortex-a7";
 			device_type = "cpu";
 			reg = <0>;
-			clock-frequency = <650000000>;
+			clocks = <&rcc CK_MPU>;
+			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
+			nvmem-cells = <&part_number_otp>;
+			nvmem-cell-names = "part_number";
 		};
 
 		cpu1: cpu@1 {
 			compatible = "arm,cortex-a7";
 			device_type = "cpu";
 			reg = <1>;
-			clock-frequency = <650000000>;
+			clocks = <&rcc CK_MPU>;
+			clock-names = "cpu";
+			operating-points-v2 = <&cpu0_opp_table>;
+		};
+	};
+
+	cpu0_opp_table: cpu0-opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-650000000 {
+			opp-hz = /bits/ 64 <650000000>;
+			opp-microvolt = <1200000>;
+			opp-supported-hw = <0x1>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <1350000>;
+			opp-supported-hw = <0x2>;
 		};
 	};
 
@@ -500,6 +522,9 @@
 			resets = <&rcc USART2_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 43 0x400 0x21>,
+			       <&dmamux1 44 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -513,6 +538,9 @@
 			resets = <&rcc USART3_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 45 0x400 0x21>,
+			       <&dmamux1 46 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -526,6 +554,9 @@
 			resets = <&rcc UART4_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 63 0x400 0x21>,
+			       <&dmamux1 64 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -539,6 +570,9 @@
 			resets = <&rcc UART5_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 65 0x400 0x21>,
+			       <&dmamux1 66 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -666,6 +700,9 @@
 			resets = <&rcc UART7_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 79 0x400 0x21>,
+			       <&dmamux1 80 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -679,6 +716,9 @@
 			resets = <&rcc UART8_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 81 0x400 0x21>,
+			       <&dmamux1 82 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -754,6 +794,9 @@
 			resets = <&rcc USART6_R>;
 			wakeup-source;
 			power-domains = <&pd_core>;
+			dmas = <&dmamux1 71 0x400 0x21>,
+			       <&dmamux1 72 0x400 0x1>;
+			dma-names = "rx", "tx";
 			status = "disabled";
 		};
 
@@ -1948,6 +1991,10 @@
 			reg = <0x5c005000 0x400>;
 			#address-cells = <1>;
 			#size-cells = <1>;
+
+			part_number_otp: part_number_otp@4 {
+				reg = <0x4 0x1>;
+			};
 			ts_cal1: calib@5c {
 				reg = <0x5c 0x2>;
 			};
@@ -2008,6 +2055,7 @@
 		st,syscfg-pdds = <&pwr 0x014 0x1>;
 		st,syscfg-holdboot = <&rcc 0x10C 0x1>;
 		st,syscfg-tz = <&rcc 0x000 0x1>;
+		st,syscfg-rsc-tbl = <&tamp 0x144 0xFFFFFFFF>;
 		status = "disabled";
 
 		m4_system_resources {
