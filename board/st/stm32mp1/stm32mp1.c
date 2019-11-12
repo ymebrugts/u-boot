@@ -882,7 +882,8 @@ const char *env_ext4_get_dev_part(void)
 
 static __maybe_unused bool board_is_dk2(void)
 {
-	if (of_machine_is_compatible("st,stm32mp157c-dk2"))
+	if (CONFIG_IS_ENABLED(TARGET_STM32MP157C_DK2) &&
+	    of_machine_is_compatible("st,stm32mp157c-dk2"))
 		return true;
 
 	return false;
