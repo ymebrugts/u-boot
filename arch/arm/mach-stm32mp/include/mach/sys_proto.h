@@ -39,3 +39,7 @@ u32 get_cpu_package(void);
 u32 get_bootmode(void);
 /* start IWDG watchdog */
 int watchdog_start(void);
+
+/* board power management : configure vddcore according OPP */
+void board_vddcore_init(u32 voltage_mv);
+int board_vddcore_set(void);

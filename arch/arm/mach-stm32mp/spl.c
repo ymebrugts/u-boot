@@ -85,10 +85,15 @@ void spl_display_print(void)
 }
 #endif
 
+__weak int board_vddcore_set(void)
+{
+	return 0;
+}
+
 void board_init_f(ulong dummy)
 {
 	struct udevice *dev;
-	int ret, clk, reset, pinctrl;
+	int ret, clk, reset, pinctrl, power;
 
 	arch_cpu_init();
 
@@ -116,9 +121,12 @@ void board_init_f(ulong dummy)
 
 	watchdog_start();
 
-	if (clk || reset || pinctrl)
-		printf("%s: probe failed clk=%d reset=%d pinctrl=%d\n",
-		       __func__, clk, reset, pinctrl);
+	/* change vddcore if needed after clock tree init */
+	power = board_vddcore_set();
+
+	if (clk || reset || pinctrl || power)
+		printf("%s: probe failed clk=%d reset=%d pinctrl=%d power=%d\n",
+		       __func__, clk, reset, pinctrl, power);
 
 	ret = uclass_get_device(UCLASS_RAM, 0, &dev);
 	if (ret) {
