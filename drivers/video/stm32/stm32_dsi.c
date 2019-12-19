@@ -438,9 +438,11 @@ static int stm32_dsi_probe(struct udevice *dev)
 			return -ENODEV;
 		}
 
-		ret = regulator_set_enable(priv->vdd_reg, true);
-		if (ret)
-			return -ENODEV;
+		if (ret != -ENOENT) {
+			ret = regulator_set_enable(priv->vdd_reg, true);
+			if (ret)
+				return ret;
+		}
 	}
 
 	ret = clk_get_by_name(device->dev, "pclk", &clk);
