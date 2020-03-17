@@ -145,7 +145,7 @@
  * for serial/usb: execute the stm32prog command
  * for mmc boot (eMMC, SD card), boot only on the same device
  * for nand boot, boot with on ubifs partition on nand
- * for nor boot, use the default order
+ * for nor boot, use SD card = mmc0
  */
 #define CONFIG_PREBOOT
 
@@ -159,6 +159,8 @@
 		"then env set boot_targets \"mmc${boot_instance}\"; fi;" \
 		"if test ${boot_device} = nand;" \
 		"then env set boot_targets ubifs0; fi;" \
+		"if test ${boot_device} = nor;" \
+		"then env set boot_targets mmc0; fi;" \
 		"run distro_bootcmd;" \
 	"fi;\0"
 
