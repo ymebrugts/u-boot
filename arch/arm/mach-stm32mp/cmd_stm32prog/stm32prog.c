@@ -95,33 +95,39 @@ u8 stm32prog_header_check(struct raw_header_s *raw_header,
 	header->present = 0;
 	header->image_checksum = 0x0;
 	header->image_length = 0x0;
-
+	 printf("entered header check\n");
 	if (!raw_header || !header) {
 		pr_debug("%s:no header data\n", __func__);
+		printf("No header data\n");
 		return -1;
 	}
 	if (raw_header->magic_number !=
 		(('S' << 0) | ('T' << 8) | ('M' << 16) | (0x32 << 24))) {
 		pr_debug("%s:invalid magic number : 0x%x\n",
 			 __func__, raw_header->magic_number);
+		printf("No magic number found\n");
 		return -2;
 	}
 	/* only header v1.0 supported */
 	if (raw_header->header_version != 0x00010000) {
 		pr_debug("%s:invalid header version : 0x%x\n",
 			 __func__, raw_header->header_version);
+		printf("Header version wrong\n");
 		return -3;
 	}
 	if (raw_header->reserved1 != 0x0 || raw_header->reserved2) {
 		pr_debug("%s:invalid reserved field\n", __func__);
+		printf("Invalid reserved field\n");
 		return -4;
 	}
 	for (i = 0; i < (sizeof(raw_header->padding) / 4); i++) {
 		if (raw_header->padding[i] != 0) {
 			pr_debug("%s:invalid padding field\n", __func__);
+			printf("Invalid padding\n");
 			return -5;
 		}
 	}
+	printf("Got through!\n");
 	header->present = 1;
 	header->image_checksum = le32_to_cpu(raw_header->image_checksum);
 	header->image_length = le32_to_cpu(raw_header->image_length);

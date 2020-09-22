@@ -9,7 +9,7 @@
  */
 
 #include <dt-bindings/clock/stm32mp1-clksrc.h>
-#include "osd32mp1.dtsi"
+#include "stm32mp15-mx.dtsi"
 
 #include "stm32mp15-u-boot.dtsi"
 #include "stm32mp15-ddr.dtsi"
@@ -22,18 +22,29 @@
 	/* USER CODE BEGIN root */
 
 	aliases{
-		i2c0 = &i2c4;
+		i2c3 = &i2c4;
 		mmc0 = &sdmmc1;
 		usb0 = &usbotg_hs;
 	};
 
 	config{
-		u-boot,boot-led = "LED2_GRN";
-		u-boot,error-led = "LED2_RED";
+		u-boot,boot-led = "heartbeat";
+		u-boot,error-led = "error";
 		u-boot,mmc-env-partition = "ssbl";
-		st,stm32prog-gpios = <&gpiod 9 GPIO_ACTIVE_LOW>;
+		st,adc_usb_pd = <&adc1 18>, <&adc1 19>;
+		st,fastboot-gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
+		st,stm32prog-gpios = <&gpioa 14 GPIO_ACTIVE_LOW>;
 	};
 
+	led{
+
+		red{
+			label = "error";
+			gpios = <&gpioa 13 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+			status = "okay";
+		};
+	};
 	/* USER CODE END root */
 
 	clocks {
@@ -111,6 +122,7 @@
 	>;
 	st,pkcs = <
 		CLK_CKPER_DISABLED
+		CLK_QSPI_ACLK
 		CLK_ETH_DISABLED
 		CLK_SDMMC12_PLL4P
 		CLK_STGEN_HSE
@@ -128,7 +140,7 @@
 		CLK_I2C35_DISABLED
 		CLK_UART1_DISABLED
 		CLK_UART24_HSI
-		CLK_UART35_DISABLED
+		CLK_UART35_PCLK1
 		CLK_UART6_DISABLED
 		CLK_UART78_DISABLED
 		CLK_SPDIF_DISABLED
@@ -141,6 +153,13 @@
 		CLK_LPTIM23_DISABLED
 		CLK_LPTIM45_DISABLED
 	>;
+	pll1:st,pll@0 {
+		compatible = "st,stm32mp1-pll";
+		reg = <0>;
+		cfg = < 2 80 0 1 1 PQR(1,0,0) >;
+		frac = < 0x800 >;
+		u-boot,dm-pre-reloc;
+	};
 	pll2:st,pll@1 {
 		compatible = "st,stm32mp1-pll";
 		reg = <1>;
@@ -170,6 +189,13 @@
 	/* USER CODE END i2c4 */
 };
 
+&qspi{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN qspi */
+	/* USER CODE END qspi */
+};
+
 &sdmmc1{
 	u-boot,dm-pre-reloc;
 
@@ -177,27 +203,27 @@
 	/* USER CODE END sdmmc1 */
 };
 
+&sdmmc2{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN sdmmc2 */
+	/* USER CODE END sdmmc2 */
+};
+
 #endif	/*CONFIG_STM32MP1_TRUSTED*/
-
-&cryp1{
-	u-boot,dm-pre-reloc;
-
-	/* USER CODE BEGIN cryp1 */
-	/* USER CODE END cryp1 */
-};
-
-&hash1{
-	u-boot,dm-pre-reloc;
-
-	/* USER CODE BEGIN hash1 */
-	/* USER CODE END hash1 */
-};
 
 &uart4{
 	u-boot,dm-pre-reloc;
 
 	/* USER CODE BEGIN uart4 */
 	/* USER CODE END uart4 */
+};
+
+&usart3{
+	u-boot,dm-pre-reloc;
+
+	/* USER CODE BEGIN usart3 */
+	/* USER CODE END usart3 */
 };
 
 &usbotg_hs{
